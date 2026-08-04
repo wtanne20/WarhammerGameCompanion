@@ -1,38 +1,40 @@
-// The 19 core Tactical Secondary Missions from the current mission pack
-// (source: wahapedia.ru/wh40k10ed/the-rules/chapter-approved-2025-26/,
-// "Chapter Approved 2025-26" — Wahapedia is the same source the rest of the
-// app's data comes from). Descriptions are paraphrased in full detail
-// (VP values, Fixed vs Tactical differences where they exist) but are still
-// paraphrases, not the verbatim card text, and were gathered via a couple of
-// fetches that didn't always perfectly agree on every number — treat these
-// as a strong reminder of how each card scores, but check the actual card
-// at the table if a specific VP breakpoint matters. Re-check this list
-// against Wahapedia if GW publishes a newer Chapter Approved; there's no
-// CSV export for mission rules the way there is for datasheets, so this is
-// hand-transcribed.
+// The 18 core (faction-agnostic) Secondary Objectives from the 11th edition
+// Eternal War mission pack. Verified against
+// wahapedia.ru/wh40k11ed/the-rules/matched-play/ (rulebook dated June 2026),
+// grouped by the game's own subcategories (you can't select two from the
+// same category). Text is cleaned up (stray spacing from HTML extraction)
+// but otherwise as close to verbatim as practical.
+//
+// This replaces 10th edition's larger "Tactical" deck-drawn system: in 11th
+// edition each player secretly selects exactly 3 secondary objectives
+// before the battle (not drawn/redrawn during play), and each can score up
+// to 15VP over the course of the game. A handful of faction-restricted
+// secondaries (e.g. Slay the Heretic, requiring Adeptus Ministorum units)
+// exist alongside these but aren't modelled here, same as the rest of the
+// app not tracking faction-specific rules text beyond datasheets/detachments.
 export const SECONDARY_MISSIONS = [
-  { name: "Behind Enemy Lines", description: "Score 3VP if one unit from your army (excluding Aircraft and Battle-shocked units) is wholly within your opponent's deployment zone at the end of your turn, or 4VP if two or more such units are." },
-  { name: "Storm Hostile Objective", description: "Score 4VP if you control one or more objective markers that your opponent controlled at the start of the turn. From round 2 on, you can also score if your opponent controlled no objectives at turn start and you now hold newly-captured ones." },
-  { name: "Engage on All Fronts", description: "Score based on how many of the battlefield's four quarters you have a unit (excluding Aircraft and Battle-shocked) wholly within, at least 6\" from the centre: 1VP for two quarters, 2VP for three, 4VP for all four." },
-  { name: "Establish Locus", description: "Complete the Establish Locus action with a unit either within 6\" of the battlefield centre (2VP) or in your opponent's deployment zone (4VP)." },
-  { name: "Cleanse", description: "Score for cleansing two or more objective markers outside your own deployment zone this turn — 4VP as a Fixed mission, 5VP as a Tactical mission." },
-  { name: "Assassination", description: "Fixed: 4VP for each destroyed enemy Character with 4 or more Wounds, 3VP for each with fewer. Tactical: 5VP if you destroy any enemy Character this turn (or if you wipe out every enemy Character, also 5VP)." },
-  { name: "No Prisoners", description: "Score 2VP each time you destroy an enemy unit this turn, up to 5VP total per turn. Works the same as Fixed or Tactical, but can't be taken as a Fixed mission in tournament play." },
-  { name: "Cull the Horde", description: "Score 5VP for destroying an enemy Infantry unit with a starting strength of 13 or more models (Fixed: per unit destroyed; Tactical: for destroying one or more such units this turn)." },
-  { name: "Bring It Down", description: "Fixed: 2VP per destroyed enemy Monster or Vehicle, plus 2VP more if it had 15+ starting Wounds, plus another 2VP if it had 20+. Tactical: flat 4VP if you destroy any Monster or Vehicle this turn." },
-  { name: "Defend Stronghold", description: "From round 2 on, score 3VP at the end of your opponent's turn (or at the end of the battle) if you control one or more objective markers within your own deployment zone." },
-  { name: "Marked for Death", description: "Your opponent nominates three of your units as Alpha targets; you nominate one enemy unit as your Gamma target. Score 5VP if an Alpha target is destroyed this turn, or 2VP if only your Gamma target is destroyed with no Alpha." },
-  { name: "Secure No Man's Land", description: "Score 2VP if you control one objective marker in No Man's Land (the contested middle of the table), or 5VP if you control two or more." },
-  { name: "Sabotage", description: "Complete the Sabotage action with a unit inside a terrain feature outside your own deployment zone — 3VP normally, or 6VP if that terrain is inside your opponent's deployment zone." },
-  { name: "Area Denial", description: "Score 2VP if you have units (excluding Aircraft/Battle-shocked) within 3\" of the battlefield centre with no enemy units within 3\", or 5VP if there are no enemy units within 6\" of the centre." },
-  { name: "Recover Assets", description: "Complete the Recover Assets action with units in two or more different zones (your deployment zone, No Man's Land, your opponent's zone) — 3VP for two, 5VP for three or more." },
-  { name: "A Tempting Target", description: "Your opponent nominates one No Man's Land objective marker as your Tempting Target. Score 5VP any turn you control it." },
-  { name: "Extend Battle Lines", description: "Score 4VP if you control objective markers in both your own deployment zone and No Man's Land at once, or 2VP just for controlling any No Man's Land objective." },
-  { name: "Overwhelming Force", description: "Fixed-only mission. Score 3VP each time you destroy an enemy unit that started the turn within range of an objective marker, up to a 5VP cap per turn." },
-  { name: "Display of Might", description: "From round 2 on, score 4VP at the end of your turn if more of your units are wholly within No Man's Land than your opponent's are." },
+  { name: "Assassinate", category: "Purge the Enemy", type: "End Game", description: "Score 3 victory points at the end of the battle for each enemy CHARACTER model that is destroyed." },
+  { name: "Bring It Down", category: "Purge the Enemy", type: "End Game", description: "Score 2 victory points at the end of the battle for each enemy MONSTER or VEHICLE model with a Wounds characteristic of 10 or less that is destroyed, and 3 victory points for each enemy MONSTER or VEHICLE model with a Wounds characteristic of 11 or more that is destroyed." },
+  { name: "Titan Slayers", category: "Purge the Enemy", type: "End Game", description: "Score 10 victory points at the end of the battle if one enemy TITANIC model is destroyed, or 15 victory points if two or more enemy TITANIC models are destroyed." },
+  { name: "Slay The Warlord", category: "Purge the Enemy", type: "End Game", description: "Score 6 victory points at the end of the battle if the enemy WARLORD is destroyed." },
+  { name: "Thin Their Ranks", category: "No Mercy, No Respite", type: "End Game", description: "Keep a tally of kill points; each time an enemy model is destroyed, add 1 (add 10 instead if it had a Wounds characteristic of 10 or more). A resurrected model can add to the tally again if destroyed again. At the end of the battle, divide your tally by 10 and round down for your victory points." },
+  { name: "Attrition", category: "No Mercy, No Respite", type: "Progressive", description: "Score 4 victory points at the end of the battle round if more enemy units than friendly units were destroyed this battle round." },
+  { name: "While We Stand, We Fight", category: "No Mercy, No Respite", type: "End Game", description: "Before the battle, identify your army's three highest-points-value units (or all of them, if you have three or fewer) and note them on your roster. Score 5VP for each that's still on the battlefield at the end of the battle." },
+  { name: "First Strike", category: "No Mercy, No Respite", type: "End Game", description: "Score 5 victory points at the end of the battle if any enemy units were destroyed in the first battle round, and score an additional 3 victory points if more enemy units than friendly units were destroyed in the first battle round." },
+  { name: "Engage On All Fronts", category: "Battlefield Supremacy", type: "Progressive", description: "Score 2 victory points at the end of your turn if you have one or more units from your army wholly within three different table quarters (all more than 6\" from the centre). Score 3 victory points instead if you have units in all four quarters." },
+  { name: "Linebreaker", category: "Battlefield Supremacy", type: "Progressive", description: "Score 4 victory points at the end of your turn if two or more units from your army (excluding Aircraft) are wholly within your opponent's deployment zone." },
+  { name: "Domination", category: "Battlefield Supremacy", type: "Progressive", description: "Score 3 victory points if you control more than half the total number of objective markers on the battlefield at the end of your turn." },
+  { name: "Defend The Shrine", category: "Battlefield Supremacy", type: "Progressive and End Game", description: "After deployment, your opponent picks an objective marker outside their deployment zone to be the Sacred Shrine. Score 3VP at the end of your turn and 3VP at the end of the battle while you control it; lose 3VP (min 0) at the end of the battle if your opponent controls it instead." },
+  { name: "Investigate Sites", category: "Shadow Operations", type: "Progressive", description: "Score 3 victory points each time a unit from your army successfully completes the Investigate Site action: one Infantry unit (excluding Characters) can start it at the end of your Movement phase if it's within 6\" of the battlefield centre with no enemy units (excluding Aircraft) within 6\"; it completes at the end of your turn." },
+  { name: "Repair Teleport Homer", category: "Shadow Operations", type: "Progressive", description: "Score 5 victory points each time a unit from your army successfully completes the Repair Teleport Homer action: one Infantry unit can start it at the end of your Movement phase if wholly within your opponent's deployment zone; it completes at the end of your next Command phase if the unit is still there." },
+  { name: "Raise The Banners High", category: "Shadow Operations", type: "Progressive and End Game", description: "Infantry units can perform the Raise Banners action on an objective marker at the end of your Movement phase (no enemy units in range), completing at the end of your turn. Score 1VP at the end of each of your Command phases, and 1VP at the end of the battle, for each objective marker with one of your banners raised on it." },
+  { name: "Mental Interrogation", category: "Warpcraft", type: "Progressive", description: "Score 3 victory points each time you successfully complete the Mental Interrogation psychic action (Warp Charge 4): one Psyker Character can attempt it in your Psychic phase if within 18\" of any enemy Character." },
+  { name: "Psychic Ritual", category: "Warpcraft", type: "End Game", description: "Score 15 victory points at the end of the battle if any unit from your army successfully completed the Psychic Ritual psychic action (Warp Charge 3, one Psyker Character within 6\" of the battlefield centre) 3 times during the battle." },
+  { name: "Abhor The Witch", category: "Warpcraft", type: "End Game", description: "You can't select this if your army includes any Psyker units. Score 5 victory points at the end of the battle for each enemy Psyker Character destroyed, and 3 for every other enemy Psyker destroyed." },
 ];
 
-// Tactical mission rules: draw 2 to start, redraw up to 2 whenever below
-// that in your Command phase, discard (achieved) once you've scored 1+ VP
-// from a card.
-export const SECONDARY_HAND_SIZE = 2;
+// Each player secretly selects exactly 3 of these before the battle, no two
+// from the same category (enforced by the picker UI). Each can score up to
+// 15VP over the course of the game.
+export const SECONDARY_SELECT_COUNT = 3;
+export const SECONDARY_VP_CAP = 15;

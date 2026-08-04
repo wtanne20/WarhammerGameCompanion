@@ -1,10 +1,13 @@
 // A single persistent scratchpad for the current game (command points,
-// primary objective points, a hand of drawn Secondary Mission cards,
-// freeform notes). Deliberately not scoped to an army — you reset it per
-// game, same as you would flip to a fresh sheet of paper at the table.
+// primary objective points, the 3 secretly-selected Secondary Objectives
+// and their scores, freeform notes). Deliberately not scoped to an army —
+// you reset it per game, same as you would flip to a fresh sheet of paper
+// at the table.
 //
-// secondaryHand: [{ id, name, scored }] — up to SECONDARY_HAND_SIZE active cards.
-// secondaryDiscarded: [{ id, name, scored }] — achieved/discarded this game.
+// secondarySelections: [{ name, scored }] — up to SECONDARY_SELECT_COUNT
+// (3) objectives picked before the battle (11th edition dropped 10th
+// edition's draw/discard "Tactical" deck system in favor of a fixed
+// pre-battle selection — see lib/secondaries.js).
 
 import { DEFAULT_PRIMARY_MISSION_ID } from "./primary.js";
 
@@ -12,7 +15,7 @@ const KEY = "game-tracker";
 
 export const DEFAULT_TRACKER = {
   cp: 1, primaryMissionId: DEFAULT_PRIMARY_MISSION_ID, opponentPrimaryMissionId: null, primaryVp: 0,
-  secondaryHand: [], secondaryDiscarded: [], notes: "",
+  secondarySelections: [], notes: "",
 };
 
 export async function loadTracker() {

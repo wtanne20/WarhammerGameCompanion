@@ -7,7 +7,7 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 
-const BASE = "https://wahapedia.ru/wh40k10ed";
+const BASE = "https://wahapedia.ru/wh40k11ed";
 const OUT_DIR = new URL("../public/data/", import.meta.url);
 
 const FILES = [
@@ -266,7 +266,7 @@ async function main() {
     new URL("meta.json", OUT_DIR),
     JSON.stringify(
       {
-        source: "wahapedia.ru/wh40k10ed",
+        source: "wahapedia.ru/wh40k11ed",
         lastUpdate: lastUpdate[0]?.last_update || null,
         syncedAt: new Date().toISOString(),
         unitCount: catalog.length,
