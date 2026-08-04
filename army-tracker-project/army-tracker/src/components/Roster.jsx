@@ -4,6 +4,7 @@ import { armyPoints, factionAccent } from "../lib/catalog.js";
 import { isLibraryIcon } from "../lib/icons.js";
 import { withBase } from "../lib/paths.js";
 import { UnitTile, SectionLabel } from "./shared.jsx";
+import StratagemsPanel from "./StratagemsPanel.jsx";
 
 function ArmyIcon({ icon, accent, editable, onClick }) {
   const library = isLibraryIcon(icon);
@@ -65,7 +66,7 @@ function ModeToggle({ playing, onChange }) {
   );
 }
 
-export default function Roster({ army, detachment, onRename, onSelect, onAdd, onOpenDetachmentPicker, onResetGame, onSetMode, onOpenIconPicker }) {
+export default function Roster({ army, detachment, stratagems, onRename, onSelect, onAdd, onOpenDetachmentPicker, onResetGame, onSetMode, onOpenIconPicker }) {
   const total = armyPoints(army);
   const [renamingArmy, setRenamingArmy] = useState(false);
   const accent = factionAccent(army.faction);
@@ -134,6 +135,11 @@ export default function Roster({ army, detachment, onRename, onSelect, onAdd, on
             <ChevronRight size={18} style={{ color: "#8B929E" }} />
           </button>
         ) : null}
+
+        <div className="mt-2">
+          <StratagemsPanel stratagems={stratagems} detachmentId={army.detachmentId} accent={accent} />
+        </div>
+
         {army.units.length > 0 && (
           <button onClick={onResetGame} className="flex items-center gap-1.5 fs10 uppercase tracking-widest mt-2 py-1 active:opacity-60" style={{ color: "#8B929E" }}>
             <RotateCcw size={11} /> Reset wounds &amp; effects for a new game

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { RotateCcw, Shuffle, Check, X, ChevronRight } from "lucide-react";
+import { RotateCcw, Shuffle, Check, X } from "lucide-react";
 import { loadTracker, saveTracker, DEFAULT_TRACKER } from "../lib/tracker.js";
 import { SECONDARY_MISSIONS, SECONDARY_HAND_SIZE } from "../lib/secondaries.js";
 import { PRIMARY_MISSIONS } from "../lib/primary.js";
@@ -11,7 +11,9 @@ import PrimaryMissionPicker from "./PrimaryMissionPicker.jsx";
 export default function GameTracker() {
   const [state, setState] = useState(null);
   const [pickingPrimary, setPickingPrimary] = useState(false);
+  const [pickingOpponentPrimary, setPickingOpponentPrimary] = useState(false);
   useCloseOnBack(pickingPrimary, () => setPickingPrimary(false));
+  useCloseOnBack(pickingOpponentPrimary, () => setPickingOpponentPrimary(false));
 
   useEffect(() => { (async () => setState(await loadTracker()))(); }, []);
   useEffect(() => { if (state) saveTracker(state); }, [state]);
@@ -19,9 +21,16 @@ export default function GameTracker() {
   if (!state) return null;
 
   const primaryMission = PRIMARY_MISSIONS.find((m) => m.id === state.primaryMissionId) || PRIMARY_MISSIONS[0];
+  const opponentPrimaryMission = state.opponentPrimaryMissionId
+    ? PRIMARY_MISSIONS.find((m) => m.id === state.opponentPrimaryMissionId)
+    : null;
   const pickPrimary = (id) => {
     setState((s) => ({ ...s, primaryMissionId: id }));
     setPickingPrimary(false);
+  };
+  const pickOpponentPrimary = (id) => {
+    setState((s) => ({ ...s, opponentPrimaryMissionId: id }));
+    setPickingOpponentPrimary(false);
   };
 
   const set = (key) => (value) => setState((s) => ({ ...s, [key]: value }));
@@ -67,14 +76,21 @@ export default function GameTracker() {
       </div>
 
       <div className="px-4 py-3" style={{ background: "#1E2228" }}>
-        <button onClick={() => setPickingPrimary(true)} className="w-full flex items-center justify-between text-left active:opacity-80">
-          <div>
-            <div className="fs10 uppercase tracking-widest" style={{ color: "#8B929E" }}>Primary mission</div>
-            <div className="font-display uppercase tracking-wide text-base mt-0.5">{primaryMission.name}</div>
-          </div>
-          <ChevronRight size={18} style={{ color: "#8B929E" }} />
-        </button>
-        <div className="fs11 mt-1" style={{ color: "#8B929E" }}>{primaryMission.description}</div>
+        <div className="fs10 uppercase tracking-widest mb-1.5" style={{ color: "#8B929E" }}>Primary mission</div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setPickingPrimary(true)} className="flex-1 min-w-0 text-left active:opacity-80">
+            <div className="fs9 uppercase tracking-widest" style={{ color: "#6B7280" }}>You</div>
+            <div className="font-display uppercase tracking-wide text-sm leading-tight truncate">{primaryMission.name}</div>
+          </button>
+          <span className="fs10 font-display shrink-0" style={{ color: "#6B7280" }}>VS</span>
+          <button onClick={() => setPickingOpponentPrimary(true)} className="flex-1 min-w-0 text-right active:opacity-80">
+            <div className="fs9 uppercase tracking-widest" style={{ color: "#6B7280" }}>Opponent</div>
+            <div className="font-display uppercase tracking-wide text-sm leading-tight truncate">
+              {opponentPrimaryMission ? opponentPrimaryMission.name : "Set mission"}
+            </div>
+          </button>
+        </div>
+        <div className="fs11 mt-2" style={{ color: "#8B929E" }}>{primaryMission.description}</div>
         <div className="flex items-center justify-between mt-3">
           <span className="fs11 uppercase tracking-widest" style={{ color: "#8B929E" }}>Points scored</span>
           <div className="flex items-center gap-3">
@@ -156,7 +172,12 @@ export default function GameTracker() {
       </div>
 
       {pickingPrimary && (
-        <PrimaryMissionPicker missions={PRIMARY_MISSIONS} onClose={() => setPickingPrimary(false)} onPick={pickPrimary} />
+        <PrimaryMissionPicker missions={PRIMARY_MISSIONS} onClose={() => setPickingPrimary(false)} onPick={pickPrimary}
+          title="Choose your primary mission" />
+      )}
+      {pickingOpponentPrimary && (
+        <PrimaryMissionPicker missions={PRIMARY_MISSIONS} onClose={() => setPickingOpponentPrimary(false)} onPick={pickOpponentPrimary}
+          title="Choose opponent's primary mission" />
       )}
     </div>
   );

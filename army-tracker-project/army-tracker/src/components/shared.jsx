@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Link2 } from "lucide-react";
 import { factionAccent, unitPoints, compositionOption, currentWounds, maxWounds } from "../lib/catalog.js";
+import { parseWeaponAbilities } from "../lib/weaponAbilities.js";
 
 export const STAT_ORDER = ["M", "T", "Sv", "W", "Ld", "OC"];
 export const STAT_LABELS = {
@@ -57,6 +59,41 @@ export function SectionLabel({ children, icon, accent }) {
   );
 }
 
+// Each bracketed ability on a weapon (e.g. "[TORRENT]") becomes its own
+// small tappable chip; tapping one that matches the core-rules glossary
+// (see lib/weaponAbilities.js) expands a plain-language description below
+// the chip row. Unrecognized ones (unique flavor-named weapon rules) still
+// display, just without a description.
+function WeaponAbilityChips({ kw, accent }) {
+  const [openLabel, setOpenLabel] = useState(null);
+  const abilities = parseWeaponAbilities(kw);
+  if (abilities.length === 0) return null;
+  const open = abilities.find((a) => a.label === openLabel);
+
+  return (
+    <div className="mt-2">
+      <div className="flex flex-wrap gap-1.5">
+        {abilities.map((a) => (
+          <button key={a.label} onClick={() => a.description && setOpenLabel(openLabel === a.label ? null : a.label)}
+            disabled={!a.description}
+            className="fs10 uppercase tracking-widest px-2 py-1 active:opacity-70"
+            style={{
+              background: openLabel === a.label ? accent : "#0F1115",
+              color: openLabel === a.label ? "#E8E2D4" : a.description ? "#C5C9D0" : "#6B7280",
+            }}>
+            {a.label}
+          </button>
+        ))}
+      </div>
+      {open && (
+        <div className="fs11 mt-2 px-3 py-2" style={{ background: "#0F1115", color: "#C5C9D0" }}>
+          <span className="font-semibold uppercase" style={{ color: "#B8925A" }}>{open.label}</span> — {open.description}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function WeaponTable({ title, weapons, ranged, icon, accent }) {
   if (!weapons || weapons.length === 0) return null;
   const labels = weaponLabels(ranged);
@@ -69,7 +106,7 @@ export function WeaponTable({ title, weapons, ranged, icon, accent }) {
             <div className="font-semibold fs15 mb-2">{w.name}</div>
             <StatBlock accent={accent} columns={2}
               stats={[w.range, w.A, w.skill, w.S, w.AP, w.D].map((value, j) => ({ label: labels[j], value }))} />
-            {w.kw && w.kw !== "—" && (<div className="fs11 italic mt-2" style={{ color: "#8B929E", whiteSpace: "pre-line" }}>[{w.kw}]</div>)}
+            <WeaponAbilityChips kw={w.kw} accent={accent} />
           </div>
         ))}
       </div>

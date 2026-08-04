@@ -8,6 +8,7 @@ import {
 } from "./lib/armies.js";
 import { loadOwned, saveOwned } from "./lib/collection.js";
 import { fetchDetachments, detachmentsForFaction } from "./lib/detachments.js";
+import { fetchStratagems } from "./lib/stratagems.js";
 import { fetchIconManifest } from "./lib/icons.js";
 import { useCloseOnBack } from "./lib/useCloseOnBack.js";
 import BottomNav from "./components/BottomNav.jsx";
@@ -46,6 +47,7 @@ export default function App() {
   const [owned, setOwned] = useState(new Map());
   const [detachments, setDetachments] = useState([]);
   const [pickingDetachment, setPickingDetachment] = useState(false);
+  const [stratagems, setStratagems] = useState(null);
   const [icons, setIcons] = useState([]);
   const [pickingIcon, setPickingIcon] = useState(false);
 
@@ -77,6 +79,9 @@ export default function App() {
       try {
         setDetachments(await fetchDetachments());
       } catch { /* detachment features degrade gracefully without this */ }
+      try {
+        setStratagems(await fetchStratagems());
+      } catch { /* stratagems section just won't render without this */ }
       try {
         setIcons(await fetchIconManifest());
       } catch { /* icon library just won't have results; upload still works */ }
@@ -256,7 +261,7 @@ export default function App() {
 
           {tab === "units" && (
             army ? (
-              <Roster army={army} detachment={detachment}
+              <Roster army={army} detachment={detachment} stratagems={stratagems}
                 onRename={(name) => setArmy((a) => ({ ...a, name }))}
                 onSelect={setSelectedUnitId}
                 onAdd={() => setAdding(true)}

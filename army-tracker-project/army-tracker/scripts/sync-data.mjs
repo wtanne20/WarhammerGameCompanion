@@ -24,6 +24,7 @@ const FILES = [
   "Abilities",
   "Detachment_abilities",
   "Enhancements",
+  "Stratagems",
   "Last_update",
 ];
 
@@ -88,6 +89,27 @@ const NAME_FIXES = {
   "Abaddon The Despoiler": "Abaddon the Despoiler",
 };
 
+// Stratagems.csv's `type` column is "<Detachment name> – <category>
+// Stratagem" (e.g. "Shield Host – Wargear Stratagem") for detachment
+// stratagems, or "Core – <category> Stratagem" for the universal ones. The
+// detachment name itself is redundant with the row's own detachment/
+// detachment_id columns, so only the trailing category is worth keeping.
+function stratagemCategory(type) {
+  if (!type) return "Stratagem";
+  const last = type.split(/[–—]/).pop().trim();
+  return last.replace(/\s*Stratagem$/i, "").trim() || "Stratagem";
+}
+
+// The leading portion of `type` before the dash is the detachment name for
+// detachment stratagems, or literally "Core" for the ~11 universal ones
+// every army gets regardless of detachment. ("Boarding Actions" rows are a
+// separate, unrelated game mode's stratagem pool — not the core rules — and
+// are naturally excluded since they're grouped under neither "Core" nor a
+// real detachment_id.)
+function stratagemGroupName(type) {
+  return (type || "").split(/[–—]/)[0].trim();
+}
+
 function groupBy(rows, key) {
   const map = new Map();
   for (const row of rows) {
@@ -104,7 +126,7 @@ async function main() {
   const [
     datasheets, models, modelsCost, wargear, abilityLinks,
     keywords, unitComposition, options, leaderPairs, factions, abilities,
-    detachmentAbilities, enhancements, lastUpdate,
+    detachmentAbilities, enhancements, stratagems, lastUpdate,
   ] = await Promise.all(FILES.map(fetchCsv));
 
   const factionNames = new Map(factions.map((f) => [f.id, f.name]));
@@ -216,9 +238,30 @@ async function main() {
     })),
   }));
 
+  const toStratagem = (r) => ({
+    id: r.id,
+    name: r.name,
+    category: stratagemCategory(r.type),
+    cpCost: Number(r.cp_cost) || 0,
+    phase: r.phase,
+    turn: r.turn,
+    legend: stripHtml(r.legend),
+    text: stripHtml(r.description),
+  });
+  const coreStratagems = stratagems.filter((r) => stratagemGroupName(r.type) === "Core").map(toStratagem);
+  const stratagemsByDetachment = {};
+  for (const r of stratagems) {
+    if (!r.detachment_id) continue;
+    (stratagemsByDetachment[r.detachment_id] ||= []).push(toStratagem(r));
+  }
+
   await mkdir(OUT_DIR, { recursive: true });
   await writeFile(new URL("catalog.json", OUT_DIR), JSON.stringify(catalog));
   await writeFile(new URL("detachments.json", OUT_DIR), JSON.stringify(detachments));
+  await writeFile(
+    new URL("stratagems.json", OUT_DIR),
+    JSON.stringify({ core: coreStratagems, byDetachment: stratagemsByDetachment })
+  );
   await writeFile(
     new URL("meta.json", OUT_DIR),
     JSON.stringify(
@@ -235,6 +278,7 @@ async function main() {
 
   console.log(`Wrote ${catalog.length} units to public/data/catalog.json`);
   console.log(`Wrote ${detachments.length} detachments to public/data/detachments.json`);
+  console.log(`Wrote ${coreStratagems.length} core + ${Object.keys(stratagemsByDetachment).length} detachments' stratagems to public/data/stratagems.json`);
 }
 
 main().catch((err) => {

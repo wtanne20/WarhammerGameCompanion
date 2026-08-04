@@ -11,7 +11,7 @@ import { DEFAULT_PRIMARY_MISSION_ID } from "./primary.js";
 const KEY = "game-tracker";
 
 export const DEFAULT_TRACKER = {
-  cp: 1, primaryMissionId: DEFAULT_PRIMARY_MISSION_ID, primaryVp: 0,
+  cp: 1, primaryMissionId: DEFAULT_PRIMARY_MISSION_ID, opponentPrimaryMissionId: null, primaryVp: 0,
   secondaryHand: [], secondaryDiscarded: [], notes: "",
 };
 

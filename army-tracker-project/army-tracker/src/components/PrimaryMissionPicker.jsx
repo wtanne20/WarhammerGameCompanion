@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { X } from "lucide-react";
 
-export default function PrimaryMissionPicker({ missions, onClose, onPick }) {
+export default function PrimaryMissionPicker({ missions, onClose, onPick, title = "Choose a primary mission" }) {
   const [q, setQ] = useState("");
   const query = q.trim().toLowerCase();
   const results = useMemo(
@@ -23,7 +23,7 @@ export default function PrimaryMissionPicker({ missions, onClose, onPick }) {
       <div className="max-w-xl w-full mx-auto overflow-y-auto" style={{ background: "#14161A", borderTop: "2px solid #8E1D22", maxHeight: "85vh" }} onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 z-10" style={{ background: "#14161A" }}>
           <div className="flex items-center justify-between px-5 py-4">
-            <h2 className="font-display uppercase tracking-wide text-lg">Choose a primary mission</h2>
+            <h2 className="font-display uppercase tracking-wide text-lg">{title}</h2>
             <button onClick={onClose} className="p-1" style={{ color: "#8B929E" }}><X size={20} /></button>
           </div>
           <div className="px-4 pb-3">
