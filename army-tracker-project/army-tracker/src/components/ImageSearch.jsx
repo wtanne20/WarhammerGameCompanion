@@ -71,7 +71,7 @@ export default function ImageSearch({ unitName, onClose, onPick }) {
                 className="flex-1 bg-transparent outline-none py-3 text-sm" style={{ color: "#E8E2D4" }} />
             </div>
             <p className="fs10 mt-2" style={{ color: "#6B7280" }}>
-              Openly-licensed photos (Flickr, Wikimedia, museums) via Openverse — creator and license shown on each result.
+              Searches Flickr, Wikimedia, and museum archives. Not finding it? Try "Paste an image URL" instead for anything you find yourself.
             </p>
           </div>
         </div>
@@ -103,10 +103,11 @@ export default function ImageSearch({ unitName, onClose, onPick }) {
                 <button key={r.id} onClick={() => pick(r)} disabled={downloadingId === r.id}
                   className="relative text-left overflow-hidden active:opacity-80" style={{ background: "#1E2228", aspectRatio: "1 / 1" }}>
                   <img src={r.thumbnail} alt={r.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
-                  <div className="absolute inset-x-0 bottom-0 px-2 py-1 fs9" style={{ background: "rgba(15,17,21,0.85)" }}>
-                    <div className="truncate" style={{ color: "#C5C9D0" }}>{r.creator || r.title}</div>
-                    {r.license && <div style={{ color: "#8B929E" }}>{r.license}</div>}
-                  </div>
+                  {(r.creator || r.title) && (
+                    <div className="absolute inset-x-0 bottom-0 px-2 py-1 fs9 truncate" style={{ background: "rgba(15,17,21,0.85)", color: "#C5C9D0" }}>
+                      {r.creator || r.title}
+                    </div>
+                  )}
                   {downloadingId === r.id && (
                     <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(15,17,21,0.75)" }}>
                       <Loader2 className="animate-spin" size={20} style={{ color: "#E8E2D4" }} />

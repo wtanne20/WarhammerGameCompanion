@@ -1,10 +1,11 @@
-import { Camera, ImagePlus, Search, X } from "lucide-react";
+import { Camera, ImagePlus, Search, Link2, X } from "lucide-react";
 
-export default function PhotoSourceSheet({ onClose, onTakePhoto, onChooseLibrary, onFindOnline }) {
+export default function PhotoSourceSheet({ onClose, onTakePhoto, onChooseLibrary, onFindOnline, onPasteUrl }) {
   const options = [
     { icon: <Camera size={18} />, label: "Take a photo", onClick: onTakePhoto },
     { icon: <ImagePlus size={18} />, label: "Choose from library", onClick: onChooseLibrary },
     { icon: <Search size={18} />, label: "Find a photo online", onClick: onFindOnline },
+    { icon: <Link2 size={18} />, label: "Paste an image URL", onClick: onPasteUrl },
   ];
   return (
     <div className="fixed inset-0 z-20 flex flex-col justify-end" style={{ background: "rgba(0,0,0,0.6)" }} onClick={onClose}>

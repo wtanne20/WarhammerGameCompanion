@@ -8,6 +8,7 @@ import EffectsPanel from "./EffectsPanel.jsx";
 import WeaponSelector from "./WeaponSelector.jsx";
 import PhotoSourceSheet from "./PhotoSourceSheet.jsx";
 import ImageSearch from "./ImageSearch.jsx";
+import PasteImageUrlSheet from "./PasteImageUrlSheet.jsx";
 
 export default function Datasheet({
   unit, armyUnits, detachment, editing = true, onBack, onRemove, onComposition, onPhoto, onWounds,
@@ -17,10 +18,11 @@ export default function Datasheet({
   const cameraRef = useRef(null);
   const libraryRef = useRef(null);
   const [busy, setBusy] = useState(false);
-  // "source" (take/library/online chooser) or "search" (online image search) —
-  // kept as one piece of state, with a single history entry for the whole
-  // flow, so switching between the two sub-views doesn't push/pop history
-  // and a back gesture from either always lands straight back on the sheet.
+  // "source" (take/library/online/url chooser), "search" (online image
+  // search), or "url" (paste an image URL) — kept as one piece of state,
+  // with a single history entry for the whole flow, so switching between
+  // sub-views doesn't push/pop history and a back gesture from any of them
+  // always lands straight back on the sheet.
   const [photoFlow, setPhotoFlow] = useState(null);
   const primaryModel = unit.models && unit.models[0];
   const wounds = currentWounds(unit);
@@ -77,10 +79,14 @@ export default function Datasheet({
           onTakePhoto={() => { setPhotoFlow(null); cameraRef.current && cameraRef.current.click(); }}
           onChooseLibrary={() => { setPhotoFlow(null); libraryRef.current && libraryRef.current.click(); }}
           onFindOnline={() => setPhotoFlow("search")}
+          onPasteUrl={() => setPhotoFlow("url")}
         />
       )}
       {photoFlow === "search" && (
         <ImageSearch unitName={unit.name} onClose={() => setPhotoFlow(null)} onPick={pickOnlineImage} />
+      )}
+      {photoFlow === "url" && (
+        <PasteImageUrlSheet onClose={() => setPhotoFlow(null)} onPick={pickOnlineImage} />
       )}
 
       {unit.legend && (

@@ -59,3 +59,19 @@ export async function downloadImageBlob(result) {
   }
   throw new Error("Couldn't download this image.");
 }
+
+// Downloads an arbitrary image URL the user found themselves (e.g. from a
+// normal Google Images search in their own browser, which has none of the
+// restrictions this app's in-app search does). Whether this succeeds
+// depends entirely on the source host allowing cross-origin fetches — many
+// ordinary websites don't, in which case this throws and the caller should
+// let the user know it couldn't be downloaded directly.
+export async function downloadImageFromUrl(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Couldn't download this image (${res.status}).`);
+  const blob = await res.blob();
+  if (!blob || blob.size === 0 || !blob.type.startsWith("image/")) {
+    throw new Error("That URL doesn't look like a direct image link.");
+  }
+  return blob;
+}
