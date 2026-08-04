@@ -4,12 +4,14 @@ import { loadTracker, saveTracker, DEFAULT_TRACKER } from "../lib/tracker.js";
 import { SECONDARY_MISSIONS, SECONDARY_HAND_SIZE } from "../lib/secondaries.js";
 import { PRIMARY_MISSIONS } from "../lib/primary.js";
 import { uid } from "../lib/id.js";
+import { useCloseOnBack } from "../lib/useCloseOnBack.js";
 import { Counter } from "./shared.jsx";
 import PrimaryMissionPicker from "./PrimaryMissionPicker.jsx";
 
 export default function GameTracker() {
   const [state, setState] = useState(null);
   const [pickingPrimary, setPickingPrimary] = useState(false);
+  useCloseOnBack(pickingPrimary, () => setPickingPrimary(false));
 
   useEffect(() => { (async () => setState(await loadTracker()))(); }, []);
   useEffect(() => { if (state) saveTracker(state); }, [state]);

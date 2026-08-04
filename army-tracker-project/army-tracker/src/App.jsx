@@ -9,6 +9,7 @@ import {
 import { loadOwned, saveOwned } from "./lib/collection.js";
 import { fetchDetachments, detachmentsForFaction } from "./lib/detachments.js";
 import { fetchIconManifest } from "./lib/icons.js";
+import { useCloseOnBack } from "./lib/useCloseOnBack.js";
 import BottomNav from "./components/BottomNav.jsx";
 import ArmyList from "./components/ArmyList.jsx";
 import Roster from "./components/Roster.jsx";
@@ -47,6 +48,14 @@ export default function App() {
   const [pickingDetachment, setPickingDetachment] = useState(false);
   const [icons, setIcons] = useState([]);
   const [pickingIcon, setPickingIcon] = useState(false);
+
+  // Each full-screen/overlay view closes on the device back gesture instead
+  // of exiting the app.
+  useCloseOnBack(!!selectedUnitId, () => setSelectedUnitId(null));
+  useCloseOnBack(adding, () => setAdding(false));
+  useCloseOnBack(creatingArmy, () => setCreatingArmy(false));
+  useCloseOnBack(pickingDetachment, () => setPickingDetachment(false));
+  useCloseOnBack(pickingIcon, () => setPickingIcon(false));
 
   const factions = useMemo(() => [...new Set(catalog.map((c) => c.faction))].sort(), [catalog]);
   const detachment = useMemo(
