@@ -1,0 +1,99 @@
+import { useState, useMemo } from "react";
+import { X, Search, Check } from "lucide-react";
+import { factionAccent, cheapestPoints } from "../lib/catalog.js";
+
+const RESULT_CAP = 100;
+
+export default function AddSheet({ catalog, faction, owned, onClose, onPick }) {
+  const [q, setQ] = useState("");
+  const [ownedOnly, setOwnedOnly] = useState(false);
+  const query = q.trim().toLowerCase();
+
+  const pool = useMemo(() => {
+    let list = faction ? catalog.filter((c) => c.faction === faction) : catalog;
+    if (ownedOnly) list = list.filter((c) => owned.has(c.id));
+    return list;
+  }, [catalog, faction, owned, ownedOnly]);
+
+  const matches = useMemo(() => {
+    if (!query) return ownedOnly ? pool : [];
+    return pool.filter((c) =>
+      [c.name, c.role, c.faction, ...(c.keywords || [])].join(" ").toLowerCase().includes(query)
+    );
+  }, [pool, query, ownedOnly]);
+
+  const results = matches.slice(0, RESULT_CAP);
+
+  return (
+    <div className="fixed inset-0 z-20 flex flex-col justify-end" style={{ background: "rgba(0,0,0,0.6)" }} onClick={onClose}>
+      <div className="max-w-xl w-full mx-auto overflow-y-auto" style={{ background: "#14161A", borderTop: "2px solid #8E1D22", maxHeight: "85vh" }} onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 z-10" style={{ background: "#14161A" }}>
+          <div className="flex items-center justify-between px-5 py-4">
+            <h2 className="font-display uppercase tracking-wide text-lg">Add a unit{faction ? ` · ${faction}` : ""}</h2>
+            <button onClick={onClose} className="p-1" style={{ color: "#8B929E" }}><X size={20} /></button>
+          </div>
+          <div className="px-4 pb-3">
+            <div className="flex items-center gap-2 px-3" style={{ background: "#1E2228" }}>
+              <Search size={16} style={{ color: "#8B929E" }} />
+              <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${pool.length} units…`}
+                className="flex-1 bg-transparent outline-none py-3 text-sm" style={{ color: "#E8E2D4" }} />
+              {q && <button onClick={() => setQ("")} style={{ color: "#8B929E" }}><X size={16} /></button>}
+            </div>
+            <button onClick={() => setOwnedOnly((v) => !v)}
+              className="mt-2 flex items-center gap-1.5 px-3 py-1.5 fs11 uppercase tracking-widest"
+              style={{ background: ownedOnly ? "#B8925A" : "#1E2228", color: ownedOnly ? "#14161A" : "#8B929E" }}>
+              <Check size={12} /> Owned only
+            </button>
+          </div>
+        </div>
+
+        {query ? (
+          <p className="px-5 pb-2 fs11 uppercase tracking-widest" style={{ color: "#8B929E" }}>
+            {matches.length} result{matches.length !== 1 ? "s" : ""}{matches.length > RESULT_CAP ? ` · showing first ${RESULT_CAP}` : ""}
+          </p>
+        ) : ownedOnly ? (
+          <p className="px-5 pb-2 fs11 uppercase tracking-widest" style={{ color: "#8B929E" }}>
+            {matches.length} owned unit{matches.length !== 1 ? "s" : ""}{faction ? ` in ${faction}` : ""}
+          </p>
+        ) : (
+          <p className="px-5 pb-2 fs11 uppercase tracking-widest" style={{ color: "#8B929E" }}>
+            {faction ? `Start typing to search ${faction}` : "Start typing to search every faction"}
+          </p>
+        )}
+
+        <div className="px-4 pb-6 space-y-2">
+          {query && results.length === 0 && (
+            <div className="text-center py-10 fs11 uppercase tracking-widest" style={{ color: "#8B929E" }}>No units match "{q}"</div>
+          )}
+          {!query && ownedOnly && results.length === 0 && (
+            <div className="text-center py-10 fs11 uppercase tracking-widest" style={{ color: "#8B929E" }}>
+              No owned {faction || ""} units yet — mark some in My Units
+            </div>
+          )}
+          {results.map((c) => {
+            const accent = factionAccent(c.faction);
+            const cheapest = cheapestPoints(c);
+            return (
+              <button key={c.id} onClick={() => onPick(c)} className="w-full text-left flex items-stretch overflow-hidden active:opacity-80" style={{ background: "#1E2228" }}>
+                <div style={{ width: 4, background: accent }} />
+                <div className="flex-1 px-4 py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-display uppercase tracking-wide text-base flex items-center gap-1.5">
+                      {owned.has(c.id) && <Check size={14} style={{ color: "#B8925A" }} />}
+                      {c.name}
+                      {owned.get(c.id) > 1 && <span className="fs10 tnum" style={{ color: "#8B929E" }}>×{owned.get(c.id)}</span>}
+                    </span>
+                    <span className="font-display tnum shrink-0" style={{ color: "#B8925A" }}>
+                      {cheapest}{c.composition.length > 1 ? "+" : ""}
+                    </span>
+                  </div>
+                  <div className="fs11 uppercase tracking-widest" style={{ color: "#8B929E" }}>{faction ? c.role : `${c.faction} · ${c.role}`}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
