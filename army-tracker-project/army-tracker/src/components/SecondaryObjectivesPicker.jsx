@@ -1,21 +1,21 @@
 import { useMemo } from "react";
 import { X, Check } from "lucide-react";
-import { SECONDARY_MISSIONS, SECONDARY_SELECT_COUNT } from "../lib/secondaries.js";
 
-export default function SecondaryObjectivesPicker({ selected, onToggle, onClose }) {
+export default function SecondaryObjectivesPicker({ missions, selectCount, selected, onToggle, onClose }) {
   const selectedNames = new Set(selected.map((s) => s.name));
   const selectedCategories = new Set(
-    selected.map((s) => SECONDARY_MISSIONS.find((m) => m.name === s.name)?.category).filter(Boolean)
+    selected.map((s) => missions.find((m) => m.name === s.name)?.category).filter(Boolean)
   );
 
   const groups = useMemo(() => {
     const byCategory = new Map();
-    for (const m of SECONDARY_MISSIONS) {
-      if (!byCategory.has(m.category)) byCategory.set(m.category, []);
-      byCategory.get(m.category).push(m);
+    for (const m of missions) {
+      const key = m.category || "Secondary Objectives";
+      if (!byCategory.has(key)) byCategory.set(key, []);
+      byCategory.get(key).push(m);
     }
     return [...byCategory.entries()];
-  }, []);
+  }, [missions]);
 
   return (
     <div className="fixed inset-0 z-20 flex flex-col justify-end" style={{ background: "rgba(0,0,0,0.6)" }} onClick={onClose}>
@@ -25,7 +25,7 @@ export default function SecondaryObjectivesPicker({ selected, onToggle, onClose 
             <div>
               <h2 className="font-display uppercase tracking-wide text-lg">Secondary objectives</h2>
               <p className="fs10 uppercase tracking-widest mt-0.5" style={{ color: "#8B929E" }}>
-                {selectedNames.size} of {SECONDARY_SELECT_COUNT} selected · one per category
+                {selectedNames.size} of {selectCount} selected{missions.some((m) => m.category) ? " · one per category" : ""}
               </p>
             </div>
             <button onClick={onClose} className="p-1" style={{ color: "#8B929E" }}><X size={20} /></button>
@@ -33,14 +33,14 @@ export default function SecondaryObjectivesPicker({ selected, onToggle, onClose 
         </div>
 
         <div className="px-4 pb-6 space-y-4">
-          {groups.map(([category, missions]) => (
+          {groups.map(([category, groupMissions]) => (
             <div key={category}>
               <div className="fs10 uppercase tracking-widest mb-2" style={{ color: "#6B7280" }}>{category}</div>
               <div className="space-y-2">
-                {missions.map((m) => {
+                {groupMissions.map((m) => {
                   const isSelected = selectedNames.has(m.name);
-                  const categoryTaken = selectedCategories.has(m.category) && !isSelected;
-                  const handFull = selectedNames.size >= SECONDARY_SELECT_COUNT && !isSelected;
+                  const categoryTaken = m.category && selectedCategories.has(m.category) && !isSelected;
+                  const handFull = selectedNames.size >= selectCount && !isSelected;
                   const disabled = categoryTaken || handFull;
                   return (
                     <button key={m.name} disabled={disabled} onClick={() => onToggle(m.name)}

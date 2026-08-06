@@ -7,7 +7,13 @@ const RESULT_CAP = 100;
 export default function AddSheet({ catalog, faction, owned, onClose, onPick }) {
   const [q, setQ] = useState("");
   const [ownedOnly, setOwnedOnly] = useState(false);
+  const [addedCounts, setAddedCounts] = useState(new Map());
   const query = q.trim().toLowerCase();
+
+  const pick = (c) => {
+    setAddedCounts((prev) => new Map(prev).set(c.id, (prev.get(c.id) || 0) + 1));
+    onPick(c);
+  };
 
   const pool = useMemo(() => {
     let list = faction ? catalog.filter((c) => c.faction === faction) : catalog;
@@ -73,9 +79,10 @@ export default function AddSheet({ catalog, faction, owned, onClose, onPick }) {
           {results.map((c) => {
             const accent = factionAccent(c.faction);
             const cheapest = cheapestPoints(c);
+            const addedCount = addedCounts.get(c.id) || 0;
             return (
-              <button key={c.id} onClick={() => onPick(c)} className="w-full text-left flex items-stretch overflow-hidden active:opacity-80" style={{ background: "#1E2228" }}>
-                <div style={{ width: 4, background: accent }} />
+              <button key={c.id} onClick={() => pick(c)} className="w-full text-left flex items-stretch overflow-hidden active:opacity-80" style={{ background: "#1E2228" }}>
+                <div style={{ width: 4, background: addedCount ? "#B8925A" : accent }} />
                 <div className="flex-1 px-4 py-3">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-display uppercase tracking-wide text-base flex items-center gap-1.5">
@@ -87,7 +94,14 @@ export default function AddSheet({ catalog, faction, owned, onClose, onPick }) {
                       {cheapest}{c.composition.length > 1 ? "+" : ""}
                     </span>
                   </div>
-                  <div className="fs11 uppercase tracking-widest" style={{ color: "#8B929E" }}>{faction ? c.role : `${c.faction} · ${c.role}`}</div>
+                  <div className="flex items-center justify-between gap-2 mt-0.5">
+                    <div className="fs11 uppercase tracking-widest" style={{ color: "#8B929E" }}>{faction ? c.role : `${c.faction} · ${c.role}`}</div>
+                    {addedCount > 0 && (
+                      <div className="flex items-center gap-1 fs10 uppercase tracking-widest shrink-0" style={{ color: "#B8925A" }}>
+                        <Check size={12} /> Added{addedCount > 1 ? ` ×${addedCount}` : ""}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </button>
             );

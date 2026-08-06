@@ -85,11 +85,28 @@ const INSTANCE_FIELDS = [
   "woundsRemaining", "customEffects", "weaponSelection",
 ];
 
+// Catalog ids aren't forever stable — switching data sources (or a source
+// renumbering its own ids) changes them outright, which would otherwise
+// permanently freeze an existing army's units on their old data (matched
+// by id, id no longer exists, "keep the stale copy" below). Name is the
+// more durable identity for a real-world datasheet, so it's the fallback
+// once an id lookup misses, and the id is implicitly healed to the current
+// one since only INSTANCE_FIELDS survive the merge below.
+function normalizeUnitName(s) {
+  return (s || "")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/['’`´]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 export function refreshUnits(units, catalog) {
   const byId = new Map(catalog.map((c) => [c.id, c]));
+  const byName = new Map(catalog.map((c) => [normalizeUnitName(c.name), c]));
   return units.map((u) => {
-    const fresh = byId.get(u.id);
-    if (!fresh) return u; // removed/renamed upstream — keep the stale copy rather than drop it silently
+    const fresh = byId.get(u.id) || byName.get(normalizeUnitName(u.name));
+    if (!fresh) return u; // genuinely gone upstream — keep the stale copy rather than drop it silently
     const instanceData = {};
     for (const key of INSTANCE_FIELDS) if (key in u) instanceData[key] = u[key];
     if (instanceData.compositionIndex >= fresh.composition.length) {

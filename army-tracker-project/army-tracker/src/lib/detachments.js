@@ -13,7 +13,24 @@ export async function fetchDetachments() {
   return res.json();
 }
 
+// catalog.json's faction names come from two sources that don't agree on
+// Space Marines: 40kdc-data tags generic Adeptus Astartes units
+// "Adeptus Astartes" and each chapter separately ("Ultramarines", "Black
+// Templars", etc.), while detachments.json (still Wahapedia-only — see
+// scripts/sync-data.mjs) files every Space Marines detachment under the
+// single umbrella name "Space Marines" regardless of chapter. Treat them
+// as one faction for matching purposes so a Black Templars (or generic
+// Adeptus Astartes) army still finds its detachments.
+const SPACE_MARINES_UMBRELLA = new Set([
+  "Adeptus Astartes", "Space Marines", "Ultramarines", "Black Templars", "Blood Angels",
+  "Crimson Fists", "Dark Angels", "Deathwatch", "Imperial Fists", "Iron Hands",
+  "Raven Guard", "Salamanders", "Space Wolves", "White Scars",
+]);
+
 export function detachmentsForFaction(detachments, faction) {
+  if (SPACE_MARINES_UMBRELLA.has(faction)) {
+    return detachments.filter((d) => SPACE_MARINES_UMBRELLA.has(d.faction));
+  }
   return detachments.filter((d) => d.faction === faction);
 }
 

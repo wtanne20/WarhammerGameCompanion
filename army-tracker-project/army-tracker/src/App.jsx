@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Shield } from "lucide-react";
+import { Loader2, Shield, X } from "lucide-react";
 import { uid } from "./lib/id.js";
 import { fetchCatalog, armyPoints, refreshUnits } from "./lib/catalog.js";
 import {
   loadArmyIndex, createArmy, deleteArmy, loadArmy, saveArmy,
-  setUnitPhoto, deleteUnitPhoto, getActiveArmyId, setActiveArmyId,
+  setUnitPhoto, deleteUnitPhoto, getActiveArmyId, setActiveArmyId, refreshAllArmies,
 } from "./lib/armies.js";
+import { checkForDataUpdate } from "./lib/updateNotice.js";
 import { loadOwned, saveOwned } from "./lib/collection.js";
 import { fetchDetachments, detachmentsForFaction } from "./lib/detachments.js";
 import { fetchStratagems } from "./lib/stratagems.js";
 import { fetchIconManifest } from "./lib/icons.js";
 import { useCloseOnBack } from "./lib/useCloseOnBack.js";
+import { useMediaQuery } from "./lib/useMediaQuery.js";
 import BottomNav from "./components/BottomNav.jsx";
 import ArmyList from "./components/ArmyList.jsx";
 import Roster from "./components/Roster.jsx";
@@ -50,6 +52,11 @@ export default function App() {
   const [stratagems, setStratagems] = useState(null);
   const [icons, setIcons] = useState([]);
   const [pickingIcon, setPickingIcon] = useState(false);
+  const [updateNotice, setUpdateNotice] = useState(null);
+  // Landscape tablets (and wide-enough rotated phones) get a two-pane
+  // roster + datasheet split view instead of the datasheet taking over the
+  // whole screen. Portrait/narrow layout below this breakpoint is untouched.
+  const isWide = useMediaQuery("(min-width: 768px)");
 
   // Each full-screen/overlay view closes on the device back gesture instead
   // of exiting the app.
@@ -68,9 +75,11 @@ export default function App() {
   useEffect(() => {
     (async () => {
       let units = [];
+      let metaData = null;
       try {
         const res = await fetchCatalog();
         units = res.units;
+        metaData = res.meta;
         setCatalog(units);
         setMeta(res.meta);
       } catch (err) {
@@ -85,6 +94,13 @@ export default function App() {
       try {
         setIcons(await fetchIconManifest());
       } catch { /* icon library just won't have results; upload still works */ }
+
+      // Refresh every stored army against the fresh catalog — not just
+      // whichever one ends up active below — so a data sync (updated
+      // stats, points, or rules) reaches all of them without the user
+      // having to open each one manually.
+      const refreshedArmyCount = units.length ? await refreshAllArmies(units) : 0;
+
       const index = await loadArmyIndex();
       setArmies(index);
       const activeId = await getActiveArmyId();
@@ -94,6 +110,15 @@ export default function App() {
         setArmy({ ...loaded, units: refreshUnits(loaded.units, units) });
       }
       setOwned(await loadOwned());
+
+      if (metaData && (await checkForDataUpdate(metaData))) {
+        setUpdateNotice(
+          refreshedArmyCount > 0
+            ? `Rules data updated — ${refreshedArmyCount} arm${refreshedArmyCount === 1 ? "y" : "ies"} refreshed automatically.`
+            : "Rules data updated."
+        );
+      }
+
       setLoading(false);
     })();
   }, []);
@@ -145,12 +170,21 @@ export default function App() {
 
   const addUnit = (cat) => {
     setArmy((a) => ({ ...a, units: [...a.units, { ...cat, instId: uid(), compositionIndex: 0 }] }));
-    setAdding(false);
   };
   const removeUnit = (instId) => {
     setArmy((a) => ({ ...a, units: a.units.filter((u) => u.instId !== instId) }));
     deleteUnitPhoto(instId);
-    setSelectedUnitId(null);
+    setSelectedUnitId((cur) => (cur === instId ? null : cur));
+  };
+  const duplicateUnit = (instId) => {
+    setArmy((a) => {
+      const index = a.units.findIndex((u) => u.instId === instId);
+      if (index === -1) return a;
+      const copy = { ...a.units[index], instId: uid(), leaderInstId: undefined, photo: undefined, woundsRemaining: undefined, customEffects: [] };
+      const units = [...a.units];
+      units.splice(index + 1, 0, copy);
+      return { ...a, units };
+    });
   };
   const setComposition = (instId, index) => {
     setArmy((a) => ({ ...a, units: a.units.map((u) => (u.instId === instId ? { ...u, compositionIndex: index } : u)) }));
@@ -235,8 +269,14 @@ export default function App() {
           Couldn't load the unit catalog ({catalogError}). Run <code>npm run sync-data</code> and reload.
         </div>
       )}
+      {updateNotice && (
+        <div className="flex items-center justify-center gap-2 px-4 py-2 fs11 text-center" style={{ background: "#2A2413", color: "#D9C48A" }}>
+          <span>{updateNotice}</span>
+          <button onClick={() => setUpdateNotice(null)} className="shrink-0 active:opacity-70" style={{ color: "#D9C48A" }}><X size={14} /></button>
+        </div>
+      )}
 
-      {selectedUnit ? (
+      {selectedUnit && !isWide ? (
         <Datasheet unit={selectedUnit} armyUnits={army.units} detachment={detachment} editing={(army.mode || "edit") === "edit"}
           onBack={() => setSelectedUnitId(null)}
           onRemove={() => removeUnit(selectedUnit.instId)}
@@ -261,14 +301,56 @@ export default function App() {
 
           {tab === "units" && (
             army ? (
-              <Roster army={army} detachment={detachment} stratagems={stratagems}
-                onRename={(name) => setArmy((a) => ({ ...a, name }))}
-                onSelect={setSelectedUnitId}
-                onAdd={() => setAdding(true)}
-                onOpenDetachmentPicker={() => setPickingDetachment(true)}
-                onResetGame={resetGame}
-                onSetMode={setMode}
-                onOpenIconPicker={() => setPickingIcon(true)} />
+              isWide ? (
+                <div className="flex" style={{ height: "calc(100vh - 64px)" }}>
+                  <div className="overflow-y-auto shrink-0" style={{ width: 400, borderRight: "1px solid #2A2E36" }}>
+                    <Roster army={army} detachment={detachment} stratagems={stratagems}
+                      onRename={(name) => setArmy((a) => ({ ...a, name }))}
+                      onSelect={setSelectedUnitId}
+                      onAdd={() => setAdding(true)}
+                      onOpenDetachmentPicker={() => setPickingDetachment(true)}
+                      onResetGame={resetGame}
+                      onSetMode={setMode}
+                      onOpenIconPicker={() => setPickingIcon(true)}
+                      selectedUnitId={selectedUnitId}
+                      fixedAddButton={false}
+                      onDuplicateUnit={duplicateUnit}
+                      onDeleteUnit={removeUnit} />
+                  </div>
+                  <div className="flex-1 overflow-y-auto">
+                    {selectedUnit ? (
+                      <Datasheet unit={selectedUnit} armyUnits={army.units} detachment={detachment} editing={(army.mode || "edit") === "edit"}
+                        onBack={() => setSelectedUnitId(null)}
+                        onRemove={() => removeUnit(selectedUnit.instId)}
+                        onComposition={(index) => setComposition(selectedUnit.instId, index)}
+                        onPhoto={(url) => setPhoto(selectedUnit.instId, url)}
+                        onWounds={setWounds}
+                        onSetLeader={setLeader}
+                        onSetEnhancement={setEnhancement}
+                        onAddCustomEffect={addCustomEffect}
+                        onRemoveCustomEffect={removeCustomEffect}
+                        onToggleWeapon={toggleWeapon} />
+                    ) : (
+                      <div className="h-full flex flex-col items-center justify-center text-center px-6" style={{ color: "#6B7280" }}>
+                        <Shield size={28} className="mb-3" style={{ color: "#2A2E36" }} />
+                        <p className="font-display uppercase tracking-wide text-base" style={{ color: "#8B929E" }}>Select a unit</p>
+                        <p className="text-sm mt-1">Its datasheet will open here.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <Roster army={army} detachment={detachment} stratagems={stratagems}
+                  onRename={(name) => setArmy((a) => ({ ...a, name }))}
+                  onSelect={setSelectedUnitId}
+                  onAdd={() => setAdding(true)}
+                  onOpenDetachmentPicker={() => setPickingDetachment(true)}
+                  onResetGame={resetGame}
+                  onSetMode={setMode}
+                  onOpenIconPicker={() => setPickingIcon(true)}
+                  onDuplicateUnit={duplicateUnit}
+                  onDeleteUnit={removeUnit} />
+              )
             ) : (
               <div className="pb-24 px-6 pt-24 text-center max-w-xl mx-auto" style={{ color: "#8B929E" }}>
                 <Shield size={28} className="mx-auto mb-3" style={{ color: "#2A2E36" }} />

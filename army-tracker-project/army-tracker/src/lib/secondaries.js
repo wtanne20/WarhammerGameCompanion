@@ -38,3 +38,30 @@ export const SECONDARY_MISSIONS = [
 // 15VP over the course of the game.
 export const SECONDARY_SELECT_COUNT = 3;
 export const SECONDARY_VP_CAP = 15;
+
+// "Tactical" mode — hold a hand of cards drawn/discarded over the course of
+// the battle, instead of picking 3 fixed ones up front. Unlike the Fixed
+// system above, this specific draw/discard mechanic isn't documented on
+// wahapedia's 11e matched-play page (only Fixed is) — it's modeled on the
+// classic Tactical secondary system from recent prior editions (hold a
+// hand of 2, discard-and-redraw whenever you like, discarded cards don't
+// return to the deck), reusing the same 18 verified objectives/categories/
+// VP text above. If your Chapter Approved 2026-27 deck's Tactical rules
+// differ (hand size, draw timing, etc.), this needs adjusting to match.
+export const TACTICAL_HAND_SIZE = 2;
+
+// Cards eligible to be drawn into a Tactical hand: not already held, not
+// already discarded this game, and no two held cards share a category
+// (same one-per-category rule as Fixed, applied to what's currently in
+// hand — a no-op for a category-less deck like the Chapter Approved 2026-27
+// secondary deck, since undefined categories never match each other here).
+export function drawableSecondaries(deck, hand, discarded) {
+  const heldNames = new Set(hand.map((h) => h.name));
+  const discardedNames = new Set(discarded.map((d) => d.name));
+  const heldCategories = new Set(
+    hand.map((h) => deck.find((m) => m.name === h.name)?.category).filter(Boolean)
+  );
+  return deck.filter(
+    (m) => !heldNames.has(m.name) && !discardedNames.has(m.name) && !(m.category && heldCategories.has(m.category))
+  );
+}

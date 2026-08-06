@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link2 } from "lucide-react";
+import { Link2, Copy, Trash2 } from "lucide-react";
 import { factionAccent, unitPoints, compositionOption, currentWounds, maxWounds } from "../lib/catalog.js";
 import { parseWeaponAbilities } from "../lib/weaponAbilities.js";
 
@@ -114,7 +114,7 @@ export function WeaponTable({ title, weapons, ranged, icon, accent }) {
   );
 }
 
-export function UnitTile({ unit, armyUnits = [], onClick }) {
+export function UnitTile({ unit, armyUnits = [], selected = false, editing = false, onClick, onDuplicate, onDelete }) {
   const accent = factionAccent(unit.faction);
   const opt = compositionOption(unit);
   const wounds = currentWounds(unit);
@@ -125,39 +125,54 @@ export function UnitTile({ unit, armyUnits = [], onClick }) {
   const leading = armyUnits.find((u) => u.leaderInstId === unit.instId);
 
   return (
-    <button onClick={onClick} className="w-full flex items-stretch overflow-hidden text-left active:opacity-80 transition-opacity" style={{ background: "#1E2228" }}>
-      <div style={{ width: 4, background: accent, flexShrink: 0 }} />
-      <div className="relative shrink-0 overflow-hidden" style={{ width: 72 }}>
-        {unit.photo ? (
-          <img src={unit.photo} alt={unit.name} className="absolute inset-0 w-full h-full object-cover" />
-        ) : (<Placeholder unit={unit} />)}
-      </div>
-      <div className="flex-1 min-w-0 px-3 py-2">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="font-display uppercase tracking-wide text-sm leading-tight truncate">{unit.name}</div>
-            <div className="fs9 uppercase tracking-widest mt-0.5" style={{ color: "#8B929E" }}>
-              {unit.faction}{opt ? ` · ${opt.description}` : ""}
-            </div>
-            {(leader || leading) && (
-              <div className="flex items-center gap-1 fs9 uppercase tracking-widest mt-0.5" style={{ color: "#B8925A" }}>
-                <Link2 size={10} />
-                {leader ? `Led by ${leader.name}` : `Leading ${leading.name}`}
-              </div>
-            )}
-          </div>
-          <div className="text-right shrink-0">
-            <div className="font-display text-sm tnum" style={{ color: "#B8925A" }}>{unitPoints(unit)}</div>
-            {damaged && <div className="fs9 tnum mt-0.5" style={{ color: "#D98C4A" }}>{wounds}/{wMax} W</div>}
-          </div>
+    <div className="w-full flex items-stretch overflow-hidden" style={{ background: selected ? "#262B33" : "#1E2228" }}>
+      <button onClick={onClick} className="flex-1 min-w-0 flex items-stretch text-left active:opacity-80 transition-opacity">
+        <div style={{ width: 4, background: selected ? "#8E1D22" : accent, flexShrink: 0 }} />
+        <div className="relative shrink-0 overflow-hidden" style={{ width: 72 }}>
+          {unit.photo ? (
+            <img src={unit.photo} alt={unit.name} className="absolute inset-0 w-full h-full object-cover" />
+          ) : (<Placeholder unit={unit} />)}
         </div>
-        {primaryModel && (
-          <div className="mt-1.5">
-            <StatBlock compact accent={accent} columns={6}
-              stats={STAT_ORDER.map((k) => ({ label: k, value: primaryModel[k] }))} />
+        <div className="flex-1 min-w-0 px-3 py-2">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="font-display uppercase tracking-wide text-sm leading-tight truncate">{unit.name}</div>
+              <div className="fs9 uppercase tracking-widest mt-0.5" style={{ color: "#8B929E" }}>
+                {unit.faction}{opt ? ` · ${opt.description}` : ""}
+              </div>
+              {(leader || leading) && (
+                <div className="flex items-center gap-1 fs9 uppercase tracking-widest mt-0.5" style={{ color: "#B8925A" }}>
+                  <Link2 size={10} />
+                  {leader ? `Led by ${leader.name}` : `Leading ${leading.name}`}
+                </div>
+              )}
+            </div>
+            <div className="text-right shrink-0">
+              <div className="font-display text-sm tnum" style={{ color: "#B8925A" }}>{unitPoints(unit)}</div>
+              {damaged && <div className="fs9 tnum mt-0.5" style={{ color: "#D98C4A" }}>{wounds}/{wMax} W</div>}
+            </div>
           </div>
-        )}
-      </div>
-    </button>
+          {primaryModel && (
+            <div className="mt-1.5">
+              <StatBlock compact accent={accent} columns={6}
+                stats={STAT_ORDER.map((k) => ({ label: k, value: primaryModel[k] }))} />
+            </div>
+          )}
+        </div>
+      </button>
+      {editing && (
+        <div className="flex flex-col shrink-0" style={{ width: 40, borderLeft: "1px solid #14161A" }}>
+          <button onClick={(e) => { e.stopPropagation(); onDuplicate && onDuplicate(); }}
+            className="flex-1 flex items-center justify-center active:opacity-70" title="Duplicate unit" style={{ color: "#8B929E" }}>
+            <Copy size={15} />
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); onDelete && onDelete(); }}
+            className="flex-1 flex items-center justify-center active:opacity-70 border-t" title="Delete unit"
+            style={{ color: "#C97B7B", borderColor: "#14161A" }}>
+            <Trash2 size={15} />
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

@@ -16,7 +16,7 @@
 // gracefully (neutral icon, unfiltered unit search).
 
 import { uid } from "./id.js";
-import { armyPoints } from "./catalog.js";
+import { armyPoints, refreshUnits } from "./catalog.js";
 
 const INDEX_KEY = "armies:index";
 const ACTIVE_KEY = "active-army";
@@ -100,6 +100,28 @@ export async function saveArmy(army) {
     entry.icon = army.icon;
     await writeJson(INDEX_KEY, index);
   }
+}
+
+// Refreshes every stored army against the current catalog — not just
+// whichever one happens to be active — and persists any that actually
+// changed. Run once on app boot so a data sync (fresh stats, points, or
+// rules) reaches every army the moment the app opens, not lazily deferred
+// until you happen to open that particular army. Returns how many armies
+// had at least one unit change, for the "data updated" notification.
+export async function refreshAllArmies(catalog) {
+  if (!catalog || catalog.length === 0) return 0;
+  const index = await loadArmyIndex();
+  let changedArmies = 0;
+  for (const entry of index) {
+    const army = await loadArmy(entry.id);
+    if (!army || army.units.length === 0) continue;
+    const refreshed = refreshUnits(army.units, catalog);
+    if (JSON.stringify(refreshed) !== JSON.stringify(army.units)) {
+      await saveArmy({ ...army, units: refreshed });
+      changedArmies++;
+    }
+  }
+  return changedArmies;
 }
 
 export async function getActiveArmyId() {

@@ -25,7 +25,9 @@ export default function DetachmentPicker({ detachments, onClose, onPick }) {
 
         <div className="px-4 pb-6 space-y-2">
           {results.length === 0 && (
-            <div className="text-center py-10 fs11 uppercase tracking-widest" style={{ color: "#8B929E" }}>No detachments match "{q}"</div>
+            <div className="text-center py-10 fs11 uppercase tracking-widest" style={{ color: "#8B929E" }}>
+              {query ? `No detachments match "${q}"` : "No detachments available for this faction"}
+            </div>
           )}
           {results.map((d) => (
             <button key={d.id} onClick={() => onPick(d.id)} className="w-full text-left px-4 py-3 active:opacity-80" style={{ background: "#1E2228" }}>

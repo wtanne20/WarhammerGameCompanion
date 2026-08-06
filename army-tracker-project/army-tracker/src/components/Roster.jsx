@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, RotateCcw, ChevronRight, ImagePlus } from "lucide-react";
+import { Plus, RotateCcw, ChevronRight, ChevronDown, ImagePlus } from "lucide-react";
 import { armyPoints, factionAccent } from "../lib/catalog.js";
 import { isLibraryIcon } from "../lib/icons.js";
 import { withBase } from "../lib/paths.js";
@@ -54,6 +54,40 @@ function groupByRole(units) {
   return [...known, ...rest].map((category) => [category, groups.get(category).sort((a, b) => a.name.localeCompare(b.name))]);
 }
 
+function DetachmentCard({ detachment, playing, onOpenDetachmentPicker }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div style={{ background: "#1E2228" }}>
+      <div className="w-full flex items-center gap-2 pr-2">
+        {playing ? (
+          <div className="min-w-0 flex-1 px-4 py-3">
+            <div className="fs10 uppercase tracking-widest" style={{ color: "#8B929E" }}>Detachment</div>
+            <div className="font-display uppercase tracking-wide text-base mt-0.5 truncate">{detachment.name}</div>
+          </div>
+        ) : (
+          <button onClick={onOpenDetachmentPicker} className="min-w-0 flex-1 text-left px-4 py-3 active:opacity-80">
+            <div className="fs10 uppercase tracking-widest" style={{ color: "#8B929E" }}>Detachment</div>
+            <div className="font-display uppercase tracking-wide text-base mt-0.5 truncate">{detachment.name}</div>
+          </button>
+        )}
+        <button onClick={() => setExpanded((v) => !v)} className="p-2 shrink-0 active:opacity-70" style={{ color: "#8B929E" }}>
+          {expanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+        </button>
+      </div>
+      {expanded && (
+        <div className="px-4 pb-3 space-y-3">
+          {detachment.abilities.map((a, i) => (
+            <div key={i}>
+              <div className="font-semibold" style={{ color: "#B8925A" }}>{a.name}</div>
+              <div className="text-sm mt-0.5" style={{ color: "#C5C9D0", whiteSpace: "pre-line" }}>{a.text}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ModeToggle({ playing, onChange }) {
   return (
     <button onClick={() => onChange(playing ? "edit" : "play")} className="flex items-center gap-2 active:opacity-80">
@@ -66,7 +100,10 @@ function ModeToggle({ playing, onChange }) {
   );
 }
 
-export default function Roster({ army, detachment, stratagems, onRename, onSelect, onAdd, onOpenDetachmentPicker, onResetGame, onSetMode, onOpenIconPicker }) {
+export default function Roster({
+  army, detachment, stratagems, onRename, onSelect, onAdd, onOpenDetachmentPicker, onResetGame, onSetMode, onOpenIconPicker,
+  selectedUnitId, fixedAddButton = true, onDuplicateUnit, onDeleteUnit,
+}) {
   const total = armyPoints(army);
   const [renamingArmy, setRenamingArmy] = useState(false);
   const accent = factionAccent(army.faction);
@@ -74,7 +111,7 @@ export default function Roster({ army, detachment, stratagems, onRename, onSelec
   const playing = army.mode === "play";
 
   return (
-    <div className="pb-44 max-w-xl mx-auto">
+    <div className={fixedAddButton ? "pb-44 max-w-xl mx-auto" : "pb-6"}>
       <header className="sticky top-0 z-10 px-3 pt-4 pb-4 border-b" style={{ background: "#14161A", borderColor: "#2A2E36" }}>
         <div className="flex items-center justify-between gap-3 min-w-0">
           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -105,30 +142,7 @@ export default function Roster({ army, detachment, stratagems, onRename, onSelec
 
       <div className="px-4 pt-4">
         {detachment ? (
-          <div style={{ background: "#1E2228" }}>
-            {playing ? (
-              <div className="px-4 py-3">
-                <div className="fs10 uppercase tracking-widest" style={{ color: "#8B929E" }}>Detachment</div>
-                <div className="font-display uppercase tracking-wide text-base mt-0.5">{detachment.name}</div>
-              </div>
-            ) : (
-              <button onClick={onOpenDetachmentPicker} className="w-full flex items-center justify-between px-4 py-3 active:opacity-80">
-                <div>
-                  <div className="fs10 uppercase tracking-widest" style={{ color: "#8B929E" }}>Detachment</div>
-                  <div className="font-display uppercase tracking-wide text-base mt-0.5">{detachment.name}</div>
-                </div>
-                <ChevronRight size={18} style={{ color: "#8B929E" }} />
-              </button>
-            )}
-            <div className="px-4 pb-3 space-y-3">
-              {detachment.abilities.map((a, i) => (
-                <div key={i}>
-                  <div className="font-semibold" style={{ color: "#B8925A" }}>{a.name}</div>
-                  <div className="text-sm mt-0.5" style={{ color: "#C5C9D0", whiteSpace: "pre-line" }}>{a.text}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <DetachmentCard detachment={detachment} playing={playing} onOpenDetachmentPicker={onOpenDetachmentPicker} />
         ) : !playing ? (
           <button onClick={onOpenDetachmentPicker} className="w-full flex items-center justify-between px-4 py-3 active:opacity-80" style={{ background: "#1E2228" }}>
             <span className="fs11 uppercase tracking-widest" style={{ color: "#8B929E" }}>Choose a detachment</span>
@@ -159,7 +173,12 @@ export default function Roster({ army, detachment, stratagems, onRename, onSelec
               <section key={role}>
                 <SectionLabel accent={accent}>{role} · {units.length}</SectionLabel>
                 <div className="space-y-2 mt-2">
-                  {units.map((u) => (<UnitTile key={u.instId} unit={u} armyUnits={army.units} onClick={() => onSelect(u.instId)} />))}
+                  {units.map((u) => (
+                    <UnitTile key={u.instId} unit={u} armyUnits={army.units} selected={u.instId === selectedUnitId} editing={!playing}
+                      onClick={() => onSelect(u.instId)}
+                      onDuplicate={() => onDuplicateUnit(u.instId)}
+                      onDelete={() => onDeleteUnit(u.instId)} />
+                  ))}
                 </div>
               </section>
             ))}
@@ -167,14 +186,21 @@ export default function Roster({ army, detachment, stratagems, onRename, onSelec
         )}
       </div>
 
-      {!playing && (
+      {!playing && (fixedAddButton ? (
         <div className="fixed left-0 right-0 p-4" style={{ bottom: 64, background: "linear-gradient(to top, #14161A 60%, transparent)" }}>
           <button onClick={onAdd} className="w-full max-w-xl mx-auto flex items-center justify-center gap-2 py-4 font-display uppercase tracking-widest text-sm"
             style={{ background: "#8E1D22", color: "#E8E2D4" }}>
             <Plus size={18} /> Add unit
           </button>
         </div>
-      )}
+      ) : (
+        <div className="px-4 pt-2">
+          <button onClick={onAdd} className="w-full flex items-center justify-center gap-2 py-4 font-display uppercase tracking-widest text-sm"
+            style={{ background: "#8E1D22", color: "#E8E2D4" }}>
+            <Plus size={18} /> Add unit
+          </button>
+        </div>
+      ))}
     </div>
   );
 }

@@ -73,6 +73,13 @@ export default function ArmyList({ armies, meta, activeArmyId, onSelect, onCreat
             })}
           </div>
         )}
+
+        <p className="fs9 uppercase tracking-widest text-center mt-6" style={{ color: "#4A505A" }}>
+          Unit stats &amp; points powered by{" "}
+          <a href="https://40kdc.alpacasoft.dev" target="_blank" rel="noreferrer" style={{ color: "#6B7280", textDecoration: "underline" }}>
+            40kdc-data
+          </a>
+        </p>
       </div>
 
       <div className="fixed left-0 right-0 p-4" style={{ bottom: 64, background: "linear-gradient(to top, #14161A 60%, transparent)" }}>
