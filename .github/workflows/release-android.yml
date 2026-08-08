@@ -1,0 +1,72 @@
+name: Release Android app
+
+# Builds, signs, and publishes a new Android release whenever the app's
+# source actually changes — this is what makes the in-app update check
+# (src/lib/appUpdate.js) have something new to find. Deliberately doesn't
+# trigger on public/data/** changes: rules-data freshness is handled live
+# on app open (src/lib/remoteData.js) and doesn't need a new binary.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "army-tracker-project/army-tracker/src/**"
+      - "army-tracker-project/army-tracker/android/**"
+      - "army-tracker-project/army-tracker/package.json"
+      - "army-tracker-project/army-tracker/package-lock.json"
+      - "army-tracker-project/army-tracker/capacitor.config.json"
+      - "army-tracker-project/army-tracker/index.html"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: army-tracker-project/army-tracker
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: army-tracker-project/army-tracker/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: android-actions/setup-android@v3
+
+      - run: npm ci
+      - run: npm run cap:build
+
+      # The signing key is never committed (see android/.gitignore) — it's
+      # decoded here from an encrypted repo secret, used, and discarded when
+      # the runner is torn down.
+      - name: Decode release keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/release.keystore
+
+      - name: Build signed release APK
+        working-directory: army-tracker-project/army-tracker/android
+        run: |
+          ./gradlew assembleRelease --no-daemon \
+            -PRELEASE_STORE_FILE="$(pwd)/release.keystore" \
+            -PRELEASE_STORE_PASSWORD="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            -PRELEASE_KEY_ALIAS="${{ secrets.ANDROID_KEY_ALIAS }}" \
+            -PRELEASE_KEY_PASSWORD="${{ secrets.ANDROID_KEY_PASSWORD }}" \
+            -PVERSION_CODE=${{ github.run_number }} \
+            -PVERSION_NAME="1.${{ github.run_number }}"
+
+      - name: Publish release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "android-build-${{ github.run_number }}" \
+            "android/app/build/outputs/apk/release/app-release.apk#Army Tracker (Android APK)" \
+            --title "Army Tracker — Android build ${{ github.run_number }}" \
+            --notes "Automatic build from commit $(git rev-parse --short HEAD)."

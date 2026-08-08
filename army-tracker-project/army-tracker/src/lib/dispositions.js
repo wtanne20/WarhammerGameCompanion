@@ -11,8 +11,11 @@
 // pairing-to-mission mapping and mission text are the confirmed part.
 
 import { withBase } from "./paths.js";
+import { getCachedRemote } from "./remoteData.js";
 
 export async function fetchDispositions() {
+  const cached = await getCachedRemote("dispositions");
+  if (cached) return cached;
   const res = await fetch(withBase("/data/dispositions.json"));
   if (!res.ok) throw new Error("Failed to load Force Disposition data.");
   return res.json();

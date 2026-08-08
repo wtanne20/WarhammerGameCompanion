@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { Loader2, Shield, X } from "lucide-react";
 import { uid } from "./lib/id.js";
 import { fetchCatalog, armyPoints, refreshUnits } from "./lib/catalog.js";
@@ -7,6 +8,8 @@ import {
   setUnitPhoto, deleteUnitPhoto, getActiveArmyId, setActiveArmyId, refreshAllArmies,
 } from "./lib/armies.js";
 import { checkForDataUpdate } from "./lib/updateNotice.js";
+import { refreshDataFromRemote } from "./lib/remoteData.js";
+import { checkForAppUpdate, downloadAndInstallUpdate } from "./lib/appUpdate.js";
 import { shareArmy, importArmy } from "./lib/shareArmy.js";
 import { loadOwned, saveOwned } from "./lib/collection.js";
 import { fetchDetachments, detachmentsForFaction } from "./lib/detachments.js";
@@ -37,6 +40,11 @@ const fontCss = `
   input, textarea { font-family: inherit; }
 `;
 
+const dataUpdatedMessage = (refreshedArmyCount) =>
+  refreshedArmyCount > 0
+    ? `Rules data updated — ${refreshedArmyCount} arm${refreshedArmyCount === 1 ? "y" : "ies"} refreshed automatically.`
+    : "Rules data updated.";
+
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [catalogError, setCatalogError] = useState(null);
@@ -57,6 +65,8 @@ export default function App() {
   const [icons, setIcons] = useState([]);
   const [pickingIcon, setPickingIcon] = useState(false);
   const [updateNotice, setUpdateNotice] = useState(null);
+  const [appUpdate, setAppUpdate] = useState(null);
+  const [installingUpdate, setInstallingUpdate] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState(null);
   // Landscape tablets (and wide-enough rotated phones) get a two-pane
   // roster + datasheet split view instead of the datasheet taking over the
@@ -118,14 +128,36 @@ export default function App() {
       setOwned(await loadOwned());
 
       if (metaData && (await checkForDataUpdate(metaData))) {
-        setUpdateNotice(
-          refreshedArmyCount > 0
-            ? `Rules data updated — ${refreshedArmyCount} arm${refreshedArmyCount === 1 ? "y" : "ies"} refreshed automatically.`
-            : "Rules data updated."
-        );
+        setUpdateNotice(dataUpdatedMessage(refreshedArmyCount));
       }
 
       setLoading(false);
+      checkForAppUpdate().then(setAppUpdate).catch(() => {});
+
+      // Native only, and only after first paint: the bundled/cached data
+      // above might already be behind whatever scripts/sync-data.mjs has
+      // since published to GitHub Pages (this APK's copy is frozen at build
+      // time). Check that live source and, if it's newer, swap it in for
+      // this session too — not blocking startup on a network round trip.
+      if (Capacitor.isNativePlatform()) {
+        const remoteMeta = await refreshDataFromRemote(metaData);
+        if (remoteMeta) {
+          const [freshCatalog, freshDetachments, freshStratagems] = await Promise.all([
+            fetchCatalog(),
+            fetchDetachments().catch(() => null),
+            fetchStratagems().catch(() => null),
+          ]);
+          setCatalog(freshCatalog.units);
+          setMeta(freshCatalog.meta);
+          if (freshDetachments) setDetachments(freshDetachments);
+          if (freshStratagems) setStratagems(freshStratagems);
+          const refreshedCount = await refreshAllArmies(freshCatalog.units);
+          setArmy((a) => (a ? { ...a, units: refreshUnits(a.units, freshCatalog.units) } : a));
+          if (await checkForDataUpdate(freshCatalog.meta)) {
+            setUpdateNotice(dataUpdatedMessage(refreshedCount));
+          }
+        }
+      }
     })();
   }, []);
 
@@ -195,6 +227,18 @@ export default function App() {
       { id: created.id, name: created.name, faction: created.faction, icon: created.icon, points: armyPoints(created), unitCount: created.units.length },
     ]);
     setImportingArmy(false);
+  };
+
+  const handleInstallUpdate = async () => {
+    if (!appUpdate) return;
+    setInstallingUpdate(true);
+    try {
+      await downloadAndInstallUpdate(appUpdate.downloadUrl);
+    } catch (err) {
+      console.error("Failed to download/install update", err);
+    } finally {
+      setInstallingUpdate(false);
+    }
   };
 
   const addUnit = (cat) => {
@@ -308,6 +352,17 @@ export default function App() {
         <div className="flex items-center justify-center gap-2 px-4 py-2 fs11 text-center" style={{ background: "#2A2413", color: "#D9C48A" }}>
           <span>{updateNotice}</span>
           <button onClick={() => setUpdateNotice(null)} className="shrink-0 active:opacity-70" style={{ color: "#D9C48A" }}><X size={14} /></button>
+        </div>
+      )}
+      {appUpdate && (
+        <div className="flex items-center justify-center gap-3 px-4 py-2 fs11 text-center" style={{ background: "#132A1F", color: "#8AD9A8" }}>
+          <span>App update available.</span>
+          <button onClick={handleInstallUpdate} disabled={installingUpdate}
+            className="shrink-0 px-3 py-1 uppercase tracking-widest active:opacity-70 disabled:opacity-50"
+            style={{ background: "#1F5C3A", color: "#E8E2D4" }}>
+            {installingUpdate ? "Downloading…" : "Update"}
+          </button>
+          <button onClick={() => setAppUpdate(null)} className="shrink-0 active:opacity-70" style={{ color: "#8AD9A8" }}><X size={14} /></button>
         </div>
       )}
 

@@ -4,8 +4,11 @@
 // keyed by detachment_id (the same id used for army.detachmentId).
 
 import { withBase } from "./paths.js";
+import { getCachedRemote } from "./remoteData.js";
 
 export async function fetchStratagems() {
+  const cached = await getCachedRemote("stratagems");
+  if (cached) return cached;
   const res = await fetch(withBase("/data/stratagems.json"));
   if (!res.ok) throw new Error("Failed to load stratagem data — try `npm run sync-data`.");
   return res.json();

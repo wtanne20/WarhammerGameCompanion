@@ -13,9 +13,12 @@
   },
   "dependencies": {
     "@alpaca-software/40kdc-data": "^1.2.1",
+    "@capacitor-community/file-opener": "^8.0.1",
     "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.1.1",
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
+    "@capacitor/file-transfer": "^2.0.4",
     "@capacitor/filesystem": "^8.1.2",
     "@capacitor/share": "^8.0.1",
     "lucide-react": "^0.383.0",

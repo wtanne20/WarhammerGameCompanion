@@ -22,6 +22,14 @@ The Android app is built with [Capacitor](https://capacitorjs.com), which wraps 
 
 There is no test suite, linter, or type checker configured in this project.
 
+### Android release pipeline
+
+`.github/workflows/release-android.yml` builds, signs, and publishes a new Android release automatically whenever relevant app source lands on `main` (path-filtered — data-only syncs don't trigger it, see below) or on manual `workflow_dispatch`. Each release is tagged `android-build-<n>`, where `n` is `github.run_number` used directly as the Android `versionCode` (passed via `-PVERSION_CODE`/`-PVERSION_NAME` Gradle properties — see `android/app/build.gradle`'s `defaultConfig`/`signingConfigs.release`).
+
+Signing uses a dedicated persistent keystore (`army-tracker-project/army-tracker/android/release.keystore`, **gitignored, never committed** — same handling as `android-twa/android.keystore`). Its passwords live in `android/release-signing.env.local` (also gitignored) for local release builds, and as encrypted repo secrets (`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`) for CI. Losing this keystore means future releases can no longer update apps built from earlier ones — back it up.
+
+To build a signed release locally: `cd android && source release-signing.env.local && ./gradlew assembleRelease -PRELEASE_STORE_FILE="$(pwd)/release.keystore" -PRELEASE_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD" -PRELEASE_KEY_ALIAS="$ANDROID_KEY_ALIAS" -PRELEASE_KEY_PASSWORD="$ANDROID_KEY_PASSWORD" -PVERSION_CODE=<n> -PVERSION_NAME="<x.y>"`.
+
 ## Architecture
 
 Army Tracker is a mobile-first React + Vite + Tailwind v4 app for building and viewing a Warhammer 40k army roster. The entire UI lives in one file, `src/App.jsx`, which contains:
@@ -44,6 +52,13 @@ Persistence keys used by the app:
 ### Army sharing (`src/lib/shareArmy.js`)
 
 Exports/imports a single army as a standalone JSON file — a one-shot "send this list to someone else," not live sync (there's no backend). `shareArmy(armyId)` strips per-unit fields that are local in-game/device state (`photo`, `woundsRemaining`, `customEffects`, `leaderInstId` — the same fields `duplicateUnit` in `App.jsx` already resets for the same reason) and hands the rest to the native Share sheet (`@capacitor/share` + `@capacitor/filesystem`, writing to the cache dir) when running as the Capacitor app, falling back to the Web Share API or a plain file download when running in a browser (e.g. `npm run dev`). `parseArmyImport`/`importArmy` do the reverse, regenerating `instId`s via `uid()` on import to avoid colliding with the receiving device's own data. UI: the share icon on each army row and the import entry point live in `ArmyList.jsx`/`ImportArmySheet.jsx`.
+
+### Keeping the native app current (`src/lib/remoteData.js`, `src/lib/appUpdate.js`)
+
+Two separate on-open checks, both gated on `Capacitor.isNativePlatform()` (no-ops on the web/PWA build, which is already served fresh):
+
+- **Rules data** (`remoteData.js`) — the catalog/detachments/stratagems/dispositions JSON bundled into the APK is frozen at build time, but `scripts/sync-data.mjs` keeps the GitHub Pages deploy current independently (weekly, `.github/workflows/sync-data.yml`). On each native app open, `App.jsx`'s boot effect compares the live deploy's `meta.json` `syncedAt` against what's loaded; if newer, it pulls the rest down, caches it via `window.storage` (so it survives to the next launch even offline), and feeds it through the existing `checkForDataUpdate`/`updateNotice` banner. The cache is read transparently by `fetchCatalog()`/`fetchDetachments()`/`fetchStratagems()`/`fetchDispositions()` themselves (via `getCachedRemote()`), so components that fetch independently of `App.jsx`'s boot sequence — e.g. `GameTracker.jsx` calling `fetchDispositions()` — pick up cached fresher data too, no wiring needed on their end.
+- **App binary** (`appUpdate.js`) — checks the GitHub Releases API for a newer `android-build-*` tag than the installed `versionCode` (see the release pipeline above) and, if found, shows a banner to download and install it. This can only ever prompt the system installer, never silently self-update — Android requires a user tap for any app outside the Play Store.
 
 ### Styling
 

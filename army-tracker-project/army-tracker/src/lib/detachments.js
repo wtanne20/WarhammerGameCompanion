@@ -6,8 +6,11 @@
 // suggestions to verify, never as certain.
 
 import { withBase } from "./paths.js";
+import { getCachedRemote } from "./remoteData.js";
 
 export async function fetchDetachments() {
+  const cached = await getCachedRemote("detachments");
+  if (cached) return cached;
   const res = await fetch(withBase("/data/detachments.json"));
   if (!res.ok) throw new Error("Failed to load detachment data — try `npm run sync-data`.");
   return res.json();

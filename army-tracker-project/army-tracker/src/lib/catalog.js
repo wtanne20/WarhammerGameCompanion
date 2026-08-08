@@ -5,6 +5,7 @@
 // points just look up the chosen composition option's fixed cost.
 
 import { withBase } from "./paths.js";
+import { getCachedRemote } from "./remoteData.js";
 
 const FACTION_ACCENT = {
   "Space Marines": "#2E4C6D",
@@ -30,6 +31,9 @@ export function factionAccent(faction) {
 }
 
 export async function fetchCatalog() {
+  const [cachedUnits, cachedMeta] = await Promise.all([getCachedRemote("catalog"), getCachedRemote("meta")]);
+  if (cachedUnits && cachedMeta) return { units: cachedUnits, meta: cachedMeta };
+
   const [unitsRes, metaRes] = await Promise.all([
     fetch(withBase("/data/catalog.json")),
     fetch(withBase("/data/meta.json")),
