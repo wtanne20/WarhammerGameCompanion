@@ -12,8 +12,9 @@ const TABS = [
 
 export default function BottomNav({ tab, onChange }) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-10 flex border-t" style={{ height: 64, background: "#14161A", borderColor: "#2A2E36" }}>
-      <div className="flex-1 max-w-xl mx-auto flex">
+    <nav className="fixed bottom-0 left-0 right-0 z-10 flex border-t"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)", background: "#14161A", borderColor: "#2A2E36" }}>
+      <div className="flex-1 max-w-xl mx-auto flex" style={{ height: 64 }}>
         {TABS.map(({ id, label, icon: Icon }) => {
           const active = tab === id;
           return (

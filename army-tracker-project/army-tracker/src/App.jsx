@@ -7,17 +7,20 @@ import {
   setUnitPhoto, deleteUnitPhoto, getActiveArmyId, setActiveArmyId, refreshAllArmies,
 } from "./lib/armies.js";
 import { checkForDataUpdate } from "./lib/updateNotice.js";
+import { shareArmy, importArmy } from "./lib/shareArmy.js";
 import { loadOwned, saveOwned } from "./lib/collection.js";
 import { fetchDetachments, detachmentsForFaction } from "./lib/detachments.js";
 import { fetchStratagems } from "./lib/stratagems.js";
 import { fetchIconManifest } from "./lib/icons.js";
 import { useCloseOnBack } from "./lib/useCloseOnBack.js";
 import { useMediaQuery } from "./lib/useMediaQuery.js";
+import ConfirmDialog from "./components/ConfirmDialog.jsx";
 import BottomNav from "./components/BottomNav.jsx";
 import ArmyList from "./components/ArmyList.jsx";
 import Roster from "./components/Roster.jsx";
 import Datasheet from "./components/Datasheet.jsx";
 import AddSheet from "./components/AddSheet.jsx";
+import ImportArmySheet from "./components/ImportArmySheet.jsx";
 import FactionPicker from "./components/FactionPicker.jsx";
 import DetachmentPicker from "./components/DetachmentPicker.jsx";
 import IconPicker from "./components/IconPicker.jsx";
@@ -46,6 +49,7 @@ export default function App() {
   const [selectedUnitId, setSelectedUnitId] = useState(null);
   const [adding, setAdding] = useState(false);
   const [creatingArmy, setCreatingArmy] = useState(false);
+  const [importingArmy, setImportingArmy] = useState(false);
   const [owned, setOwned] = useState(new Map());
   const [detachments, setDetachments] = useState([]);
   const [pickingDetachment, setPickingDetachment] = useState(false);
@@ -53,6 +57,7 @@ export default function App() {
   const [icons, setIcons] = useState([]);
   const [pickingIcon, setPickingIcon] = useState(false);
   const [updateNotice, setUpdateNotice] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(null);
   // Landscape tablets (and wide-enough rotated phones) get a two-pane
   // roster + datasheet split view instead of the datasheet taking over the
   // whole screen. Portrait/narrow layout below this breakpoint is untouched.
@@ -63,6 +68,7 @@ export default function App() {
   useCloseOnBack(!!selectedUnitId, () => setSelectedUnitId(null));
   useCloseOnBack(adding, () => setAdding(false));
   useCloseOnBack(creatingArmy, () => setCreatingArmy(false));
+  useCloseOnBack(importingArmy, () => setImportingArmy(false));
   useCloseOnBack(pickingDetachment, () => setPickingDetachment(false));
   useCloseOnBack(pickingIcon, () => setPickingIcon(false));
 
@@ -158,14 +164,37 @@ export default function App() {
     setCreatingArmy(false);
     setTab("units");
   };
-  const removeArmy = async (id) => {
-    if (!window.confirm("Delete this army? This can't be undone.")) return;
-    await deleteArmy(id);
-    setArmies((prev) => prev.filter((a) => a.id !== id));
-    if (id === activeArmyId) {
-      setArmy(null);
-      setActiveArmyIdState(null);
+  const removeArmy = (id) => {
+    setConfirmDialog({
+      message: "Delete this army? This can't be undone.",
+      confirmLabel: "Delete",
+      danger: true,
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        await deleteArmy(id);
+        setArmies((prev) => prev.filter((a) => a.id !== id));
+        if (id === activeArmyId) {
+          setArmy(null);
+          setActiveArmyIdState(null);
+        }
+      },
+    });
+  };
+
+  const handleShareArmy = async (id) => {
+    try {
+      await shareArmy(id);
+    } catch (err) {
+      console.error("Failed to share army", err);
     }
+  };
+  const handleImportArmy = async (armyData) => {
+    const created = await importArmy(armyData);
+    setArmies((prev) => [
+      ...prev,
+      { id: created.id, name: created.name, faction: created.faction, icon: created.icon, points: armyPoints(created), unitCount: created.units.length },
+    ]);
+    setImportingArmy(false);
   };
 
   const addUnit = (cat) => {
@@ -206,8 +235,14 @@ export default function App() {
     setPickingDetachment(false);
   };
   const resetGame = () => {
-    if (!window.confirm("Reset wounds and effects for every unit in this army?")) return;
-    setArmy((a) => ({ ...a, units: a.units.map((u) => ({ ...u, woundsRemaining: undefined, customEffects: [] })) }));
+    setConfirmDialog({
+      message: "Reset wounds and effects for every unit in this army?",
+      confirmLabel: "Reset",
+      onConfirm: () => {
+        setArmy((a) => ({ ...a, units: a.units.map((u) => ({ ...u, woundsRemaining: undefined, customEffects: [] })) }));
+        setConfirmDialog(null);
+      },
+    });
   };
   const setWounds = (instId, n) => {
     setArmy((a) => ({ ...a, units: a.units.map((u) => (u.instId === instId ? { ...u, woundsRemaining: n } : u)) }));
@@ -296,7 +331,8 @@ export default function App() {
 
           {tab === "armies" && (
             <ArmyList armies={armies} meta={meta} activeArmyId={activeArmyId}
-              onSelect={openArmy} onCreate={() => setCreatingArmy(true)} onDelete={removeArmy} />
+              onSelect={openArmy} onCreate={() => setCreatingArmy(true)} onDelete={removeArmy}
+              onShare={handleShareArmy} onImport={() => setImportingArmy(true)} />
           )}
 
           {tab === "units" && (
@@ -370,6 +406,7 @@ export default function App() {
 
       {adding && army && <AddSheet catalog={catalog} faction={army.faction} owned={owned} onClose={() => setAdding(false)} onPick={addUnit} />}
       {creatingArmy && <FactionPicker factions={factions} onClose={() => setCreatingArmy(false)} onPick={pickFaction} />}
+      {importingArmy && <ImportArmySheet onClose={() => setImportingArmy(false)} onImport={handleImportArmy} />}
       {pickingDetachment && army && (
         <DetachmentPicker detachments={detachmentsForFaction(detachments, army.faction)}
           onClose={() => setPickingDetachment(false)} onPick={pickDetachment} />
@@ -377,6 +414,8 @@ export default function App() {
       {pickingIcon && army && (
         <IconPicker icons={icons} onClose={() => setPickingIcon(false)} onPick={pickIcon} />
       )}
+      <ConfirmDialog open={!!confirmDialog} message={confirmDialog?.message} confirmLabel={confirmDialog?.confirmLabel}
+        danger={confirmDialog?.danger} onConfirm={() => confirmDialog?.onConfirm()} onCancel={() => setConfirmDialog(null)} />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { Plus, Trash2, Shield } from "lucide-react";
+import { Plus, Trash2, Shield, Share2, Upload } from "lucide-react";
 import { factionAccent } from "../lib/catalog.js";
 import { isLibraryIcon } from "../lib/icons.js";
 import { withBase } from "../lib/paths.js";
@@ -27,17 +27,22 @@ function FactionBadge({ faction, icon }) {
   );
 }
 
-export default function ArmyList({ armies, meta, activeArmyId, onSelect, onCreate, onDelete }) {
+export default function ArmyList({ armies, meta, activeArmyId, onSelect, onCreate, onDelete, onShare, onImport }) {
   const synced = formatSyncDate(meta);
   return (
     <div className="pb-44 max-w-xl mx-auto">
-      <header className="sticky top-0 z-10 px-5 pt-6 pb-4 border-b" style={{ background: "#14161A", borderColor: "#2A2E36" }}>
-        <h1 className="font-display uppercase tracking-wide text-2xl leading-none">Armies</h1>
-        <p className="fs11 uppercase tracking-widest mt-2" style={{ color: "#8B929E" }}>
-          {armies.length} arm{armies.length !== 1 ? "ies" : "y"}
-          {meta ? ` · ${meta.unitCount} units` : ""}
-          {synced ? ` · data as of ${synced}` : ""}
-        </p>
+      <header className="sticky top-0 z-10 flex items-start justify-between gap-2 px-5 pt-6 pb-4 border-b" style={{ background: "#14161A", borderColor: "#2A2E36" }}>
+        <div className="min-w-0">
+          <h1 className="font-display uppercase tracking-wide text-2xl leading-none">Armies</h1>
+          <p className="fs11 uppercase tracking-widest mt-2" style={{ color: "#8B929E" }}>
+            {armies.length} arm{armies.length !== 1 ? "ies" : "y"}
+            {meta ? ` · ${meta.unitCount} units` : ""}
+            {synced ? ` · data as of ${synced}` : ""}
+          </p>
+        </div>
+        <button onClick={onImport} className="shrink-0 p-2 active:opacity-70" title="Import army" style={{ color: "#8B929E" }}>
+          <Upload size={20} />
+        </button>
       </header>
 
       <div className="px-4 pt-4">
@@ -65,7 +70,10 @@ export default function ArmyList({ armies, meta, activeArmyId, onSelect, onCreat
                       </div>
                     </div>
                   </button>
-                  <button onClick={() => onDelete(a.id)} className="px-4 flex items-center active:opacity-60" style={{ color: "#8B929E" }}>
+                  <button onClick={() => onShare(a.id)} className="px-4 flex items-center active:opacity-60" style={{ color: "#8B929E" }} title="Share army">
+                    <Share2 size={16} />
+                  </button>
+                  <button onClick={() => onDelete(a.id)} className="px-4 flex items-center active:opacity-60" style={{ color: "#8B929E" }} title="Delete army">
                     <Trash2 size={16} />
                   </button>
                 </div>

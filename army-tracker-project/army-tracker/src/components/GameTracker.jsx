@@ -6,6 +6,7 @@ import { PRIMARY_MISSIONS } from "../lib/primary.js";
 import { fetchDispositions, matchupFor, missionFor, primaryCardFor, dispositionSecondaryDeck } from "../lib/dispositions.js";
 import { useCloseOnBack } from "../lib/useCloseOnBack.js";
 import { Counter } from "./shared.jsx";
+import ConfirmDialog from "./ConfirmDialog.jsx";
 import PrimaryMissionPicker from "./PrimaryMissionPicker.jsx";
 import DispositionPicker from "./DispositionPicker.jsx";
 import SecondaryObjectivesPicker from "./SecondaryObjectivesPicker.jsx";
@@ -18,6 +19,7 @@ export default function GameTracker() {
   const [pickingDisposition, setPickingDisposition] = useState(false);
   const [pickingOpponentDisposition, setPickingOpponentDisposition] = useState(false);
   const [pickingSecondaries, setPickingSecondaries] = useState(false);
+  const [confirmingReset, setConfirmingReset] = useState(false);
   useCloseOnBack(pickingPrimary, () => setPickingPrimary(false));
   useCloseOnBack(pickingOpponentPrimary, () => setPickingOpponentPrimary(false));
   useCloseOnBack(pickingDisposition, () => setPickingDisposition(false));
@@ -65,11 +67,7 @@ export default function GameTracker() {
 
   const set = (key) => (value) => setState((s) => ({ ...s, [key]: value }));
   const setMissionSystem = (system) => setState((s) => ({ ...s, missionSystem: system }));
-  const reset = () => {
-    if (window.confirm("Reset command points, objectives, and notes for a new game?")) {
-      setState({ ...DEFAULT_TRACKER });
-    }
-  };
+  const reset = () => setConfirmingReset(true);
 
   // The active secondary deck follows the chosen mission system: the base
   // rulebook's 18 Eternal War objectives, or the Chapter Approved 2026-2027
@@ -336,6 +334,9 @@ export default function GameTracker() {
         <SecondaryObjectivesPicker missions={secondaryDeck} selectCount={SECONDARY_SELECT_COUNT}
           selected={state.secondarySelections} onToggle={toggleSecondary} onClose={() => setPickingSecondaries(false)} />
       )}
+      <ConfirmDialog open={confirmingReset} message="Reset command points, objectives, and notes for a new game?" confirmLabel="Reset"
+        onConfirm={() => { setState({ ...DEFAULT_TRACKER }); setConfirmingReset(false); }}
+        onCancel={() => setConfirmingReset(false)} />
     </div>
   );
 }
