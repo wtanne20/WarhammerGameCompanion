@@ -49,17 +49,17 @@ export default function Datasheet({
 
   return (
     <div className="pb-10 max-w-xl mx-auto">
-      <header className="sticky top-0 z-10 flex items-center gap-2 px-3 py-3 border-b" style={{ background: "#14161A", borderColor: "#2A2E36" }}>
-        <button onClick={onBack} className="p-2 active:opacity-60" style={{ color: "#8B929E" }}><ChevronLeft size={22} /></button>
+      <header className="sticky top-0 z-10 flex items-center gap-2 px-3 py-3 border-b" style={{ background: "var(--wh-bg)", borderColor: "var(--wh-border)" }}>
+        <button onClick={onBack} className="p-2 active:opacity-60" style={{ color: "var(--wh-muted)" }}><ChevronLeft size={22} /></button>
         <div className="flex-1 min-w-0">
           <div className="font-display uppercase tracking-wide text-lg leading-none truncate">{unit.name}</div>
-          <div className="fs10 uppercase tracking-widest" style={{ color: "#8B929E" }}>{unit.faction} · {unit.role}</div>
+          <div className="fs10 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>{unit.faction} · {unit.role}</div>
         </div>
-        <div className="font-display text-xl tnum px-1" style={{ color: "#B8925A" }}>{unitPoints(unit)}</div>
-        {editing && <button onClick={onRemove} className="p-2 active:opacity-60" style={{ color: "#8B929E" }}><Trash2 size={18} /></button>}
+        <div className="font-display text-xl tnum px-1" style={{ color: "var(--wh-accent-gold)" }}>{unitPoints(unit)}</div>
+        {editing && <button onClick={onRemove} className="p-2 active:opacity-60" style={{ color: "var(--wh-muted)" }}><Trash2 size={18} /></button>}
       </header>
 
-      <div className="relative w-full overflow-hidden" style={{ background: "#1E2228", aspectRatio: "16 / 10" }}>
+      <div className="relative w-full overflow-hidden" style={{ background: "var(--wh-surface)", aspectRatio: "16 / 10" }}>
         {unit.photo ? (
           <img src={unit.photo} alt={unit.name} className="absolute inset-0 w-full h-full object-cover" />
         ) : (<Placeholder unit={unit} big />)}
@@ -67,7 +67,7 @@ export default function Datasheet({
         <input ref={libraryRef} type="file" accept="image/*" onChange={pickPhotoFile} className="hidden" />
         <button onClick={() => setPhotoFlow("source")} disabled={busy}
           className="absolute flex items-center gap-1.5 font-display uppercase tracking-widest fs11 active:opacity-80"
-          style={{ bottom: 12, right: 12, padding: "8px 12px", background: "rgba(15,17,21,0.85)", color: "#E8E2D4" }}>
+          style={{ bottom: 12, right: 12, padding: "8px 12px", background: "rgba(15,17,21,0.85)", color: "var(--wh-text)" }}>
           {busy ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
           {unit.photo ? "Change photo" : "Add photo"}
         </button>
@@ -91,7 +91,7 @@ export default function Datasheet({
 
       {unit.legend && (
         <div className="px-3 pt-4">
-          <p className="fs11 italic" style={{ color: "#8B929E" }}>{unit.legend}</p>
+          <p className="fs11 italic" style={{ color: "var(--wh-muted)" }}>{unit.legend}</p>
         </div>
       )}
 
@@ -113,10 +113,10 @@ export default function Datasheet({
 
       {unit.composition && unit.composition.length > 0 && (
         <div className="px-3 pt-4">
-          <div className="px-4 py-3" style={{ background: "#1E2228" }}>
+          <div className="px-4 py-3" style={{ background: "var(--wh-surface)" }}>
             <div className="flex items-center justify-between gap-2">
-              <span className="fs11 uppercase tracking-widest" style={{ color: "#8B929E" }}>Composition</span>
-              {unit.compositionText && <span className="fs10 text-right" style={{ color: "#6B7280" }}>{unit.compositionText}</span>}
+              <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Composition</span>
+              {unit.compositionText && <span className="fs10 text-right" style={{ color: "var(--wh-dim)" }}>{unit.compositionText}</span>}
             </div>
             {editing && unit.composition.length > 1 ? (
               <div className="flex flex-wrap gap-2 mt-3">
@@ -124,9 +124,9 @@ export default function Datasheet({
                   const active = i === unit.compositionIndex;
                   return (
                     <button key={i} onClick={() => onComposition(i)} className="text-left px-3 py-2"
-                      style={{ background: active ? accent : "#0F1115", color: active ? "#E8E2D4" : "#C5C9D0" }}>
+                      style={{ background: active ? accent : "var(--wh-surface-alt)", color: active ? "var(--wh-text)" : "var(--wh-text-body)" }}>
                       <div className="font-display text-sm leading-none">{opt.description}</div>
-                      <div className="fs10 tnum mt-1" style={{ color: active ? "rgba(232,226,212,0.8)" : "#8B929E" }}>{opt.points} pts</div>
+                      <div className="fs10 tnum mt-1" style={{ color: active ? "rgba(232,226,212,0.8)" : "var(--wh-muted)" }}>{opt.points} pts</div>
                     </button>
                   );
                 })}
@@ -134,7 +134,7 @@ export default function Datasheet({
             ) : (
               <div className="flex items-center justify-between mt-2">
                 <span className="font-display text-lg">{selectedComposition.description}</span>
-                <span className="font-display text-lg tnum" style={{ color: "#B8925A" }}>{selectedComposition.points} pts</span>
+                <span className="font-display text-lg tnum" style={{ color: "var(--wh-accent-gold)" }}>{selectedComposition.points} pts</span>
               </div>
             )}
           </div>
@@ -151,9 +151,9 @@ export default function Datasheet({
           <SectionLabel icon={<Shield size={13} />} accent={accent}>Abilities</SectionLabel>
           <div className="mt-2 space-y-px">
             {unit.abilities.map((ab, i) => (
-              <div key={i} className="px-4 py-3" style={{ background: "#1E2228" }}>
-                <span className="font-semibold" style={{ color: "#B8925A" }}>{ab.name}.</span>{" "}
-                <span style={{ color: "#C5C9D0", whiteSpace: "pre-line" }}>{ab.text}</span>
+              <div key={i} className="px-4 py-3" style={{ background: "var(--wh-surface)" }}>
+                <span className="font-semibold" style={{ color: "var(--wh-accent-gold)" }}>{ab.name}.</span>{" "}
+                <span style={{ color: "var(--wh-text-body)", whiteSpace: "pre-line" }}>{ab.text}</span>
               </div>
             ))}
           </div>
@@ -163,7 +163,7 @@ export default function Datasheet({
       <section className="px-3 pt-5">
         <SectionLabel accent={accent}>Keywords</SectionLabel>
         <div className="flex flex-wrap gap-1.5 mt-2">
-          {unit.keywords.map((k) => (<span key={k} className="fs10 uppercase tracking-widest px-2 py-1" style={{ background: "#1E2228", color: "#8B929E" }}>{k}</span>))}
+          {unit.keywords.map((k) => (<span key={k} className="fs10 uppercase tracking-widest px-2 py-1" style={{ background: "var(--wh-surface)", color: "var(--wh-muted)" }}>{k}</span>))}
         </div>
       </section>
     </div>

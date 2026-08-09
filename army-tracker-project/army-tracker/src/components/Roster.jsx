@@ -9,7 +9,7 @@ import StratagemsPanel from "./StratagemsPanel.jsx";
 function ArmyIcon({ icon, accent, editable, onClick }) {
   const library = isLibraryIcon(icon);
   const badge = (
-    <div className="relative shrink-0 overflow-hidden" style={{ width: 44, height: 44, background: icon ? (library ? "#C9CDD3" : "#0F1115") : accent }}>
+    <div className="relative shrink-0 overflow-hidden" style={{ width: 44, height: 44, background: icon ? (library ? "#C9CDD3" : "var(--wh-surface-alt)") : accent }}>
       {icon ? (
         <img src={library ? encodeURI(withBase(icon)) : icon} alt="" className={library ? "absolute inset-0 w-full h-full object-contain p-1" : "absolute inset-0 w-full h-full object-cover"} />
       ) : (
@@ -57,20 +57,20 @@ function groupByRole(units) {
 function DetachmentCard({ detachment, playing, onOpenDetachmentPicker }) {
   const [expanded, setExpanded] = useState(false);
   return (
-    <div style={{ background: "#1E2228" }}>
+    <div style={{ background: "var(--wh-surface)" }}>
       <div className="w-full flex items-center gap-2 pr-2">
         {playing ? (
           <div className="min-w-0 flex-1 px-4 py-3">
-            <div className="fs10 uppercase tracking-widest" style={{ color: "#8B929E" }}>Detachment</div>
+            <div className="fs10 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Detachment</div>
             <div className="font-display uppercase tracking-wide text-base mt-0.5 truncate">{detachment.name}</div>
           </div>
         ) : (
           <button onClick={onOpenDetachmentPicker} className="min-w-0 flex-1 text-left px-4 py-3 active:opacity-80">
-            <div className="fs10 uppercase tracking-widest" style={{ color: "#8B929E" }}>Detachment</div>
+            <div className="fs10 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Detachment</div>
             <div className="font-display uppercase tracking-wide text-base mt-0.5 truncate">{detachment.name}</div>
           </button>
         )}
-        <button onClick={() => setExpanded((v) => !v)} className="p-2 shrink-0 active:opacity-70" style={{ color: "#8B929E" }}>
+        <button onClick={() => setExpanded((v) => !v)} className="p-2 shrink-0 active:opacity-70" style={{ color: "var(--wh-muted)" }}>
           {expanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
         </button>
       </div>
@@ -78,8 +78,8 @@ function DetachmentCard({ detachment, playing, onOpenDetachmentPicker }) {
         <div className="px-4 pb-3 space-y-3">
           {detachment.abilities.map((a, i) => (
             <div key={i}>
-              <div className="font-semibold" style={{ color: "#B8925A" }}>{a.name}</div>
-              <div className="text-sm mt-0.5" style={{ color: "#C5C9D0", whiteSpace: "pre-line" }}>{a.text}</div>
+              <div className="font-semibold" style={{ color: "var(--wh-accent-gold)" }}>{a.name}</div>
+              <div className="text-sm mt-0.5" style={{ color: "var(--wh-text-body)", whiteSpace: "pre-line" }}>{a.text}</div>
             </div>
           ))}
         </div>
@@ -91,11 +91,11 @@ function DetachmentCard({ detachment, playing, onOpenDetachmentPicker }) {
 function ModeToggle({ playing, onChange }) {
   return (
     <button onClick={() => onChange(playing ? "edit" : "play")} className="flex items-center gap-2 active:opacity-80">
-      <span className="fs10 uppercase tracking-widest" style={{ color: playing ? "#8B929E" : "#E8E2D4" }}>Editing</span>
-      <span className="relative shrink-0" style={{ width: 40, height: 22, background: playing ? "#8E1D22" : "#2A2E36", borderRadius: 999 }}>
-        <span className="absolute" style={{ top: 2, left: playing ? 20 : 2, width: 18, height: 18, background: "#E8E2D4", borderRadius: 999, transition: "left 0.15s" }} />
+      <span className="fs10 uppercase tracking-widest" style={{ color: playing ? "var(--wh-muted)" : "var(--wh-text)" }}>Editing</span>
+      <span className="relative shrink-0" style={{ width: 40, height: 22, background: playing ? "var(--wh-accent)" : "var(--wh-border)", borderRadius: 999 }}>
+        <span className="absolute" style={{ top: 2, left: playing ? 20 : 2, width: 18, height: 18, background: "var(--wh-text)", borderRadius: 999, transition: "left 0.15s" }} />
       </span>
-      <span className="fs10 uppercase tracking-widest" style={{ color: playing ? "#E8E2D4" : "#8B929E" }}>Playing</span>
+      <span className="fs10 uppercase tracking-widest" style={{ color: playing ? "var(--wh-text)" : "var(--wh-muted)" }}>Playing</span>
     </button>
   );
 }
@@ -112,7 +112,7 @@ export default function Roster({
 
   return (
     <div className={fixedAddButton ? "pb-44 max-w-xl mx-auto" : "pb-6"}>
-      <header className="sticky top-0 z-10 px-3 pt-4 pb-4 border-b" style={{ background: "#14161A", borderColor: "#2A2E36" }}>
+      <header className="sticky top-0 z-10 px-3 pt-4 pb-4 border-b" style={{ background: "var(--wh-bg)", borderColor: "var(--wh-border)" }}>
         <div className="flex items-center justify-between gap-3 min-w-0">
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <ArmyIcon icon={army.icon} accent={accent} editable={!playing} onClick={onOpenIconPicker} />
@@ -122,18 +122,18 @@ export default function Roster({
                 onBlur={() => setRenamingArmy(false)}
                 onKeyDown={(e) => e.key === "Enter" && setRenamingArmy(false)}
                 className="font-display uppercase tracking-wide text-2xl bg-transparent border-b outline-none flex-1 min-w-0"
-                style={{ borderColor: "#8E1D22", color: "#E8E2D4" }} />
+                style={{ borderColor: "var(--wh-accent)", color: "var(--wh-text)" }} />
             ) : (
               <h1 onClick={() => !playing && setRenamingArmy(true)} className="font-display uppercase tracking-wide text-2xl leading-none truncate min-w-0">{army.name}</h1>
             )}
           </div>
           <div className="text-right shrink-0">
-            <div className="font-display text-2xl leading-none tnum" style={{ color: "#B8925A" }}>{total}</div>
-            <div className="fs10 uppercase tracking-widest" style={{ color: "#8B929E" }}>points</div>
+            <div className="font-display text-2xl leading-none tnum" style={{ color: "var(--wh-accent-gold)" }}>{total}</div>
+            <div className="fs10 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>points</div>
           </div>
         </div>
         <div className="flex items-center justify-between gap-3 mt-2">
-          <p className="fs11 uppercase tracking-widest" style={{ color: "#8B929E" }}>
+          <p className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>
             {army.faction || "Unknown faction"} · {army.units.length} unit{army.units.length !== 1 ? "s" : ""}
           </p>
           <ModeToggle playing={playing} onChange={onSetMode} />
@@ -144,9 +144,9 @@ export default function Roster({
         {detachment ? (
           <DetachmentCard detachment={detachment} playing={playing} onOpenDetachmentPicker={onOpenDetachmentPicker} />
         ) : !playing ? (
-          <button onClick={onOpenDetachmentPicker} className="w-full flex items-center justify-between px-4 py-3 active:opacity-80" style={{ background: "#1E2228" }}>
-            <span className="fs11 uppercase tracking-widest" style={{ color: "#8B929E" }}>Choose a detachment</span>
-            <ChevronRight size={18} style={{ color: "#8B929E" }} />
+          <button onClick={onOpenDetachmentPicker} className="w-full flex items-center justify-between px-4 py-3 active:opacity-80" style={{ background: "var(--wh-surface)" }}>
+            <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Choose a detachment</span>
+            <ChevronRight size={18} style={{ color: "var(--wh-muted)" }} />
           </button>
         ) : null}
 
@@ -155,7 +155,7 @@ export default function Roster({
         </div>
 
         {army.units.length > 0 && (
-          <button onClick={onResetGame} className="flex items-center gap-1.5 fs10 uppercase tracking-widest mt-2 py-1 active:opacity-60" style={{ color: "#8B929E" }}>
+          <button onClick={onResetGame} className="flex items-center gap-1.5 fs10 uppercase tracking-widest mt-2 py-1 active:opacity-60" style={{ color: "var(--wh-muted)" }}>
             <RotateCcw size={11} /> Reset wounds &amp; effects for a new game
           </button>
         )}
@@ -163,8 +163,8 @@ export default function Roster({
 
       <div className="px-4 pt-4">
         {army.units.length === 0 ? (
-          <div className="text-center py-16 px-6" style={{ color: "#8B929E" }}>
-            <p className="font-display uppercase tracking-wide text-lg" style={{ color: "#E8E2D4" }}>No units yet</p>
+          <div className="text-center py-16 px-6" style={{ color: "var(--wh-muted)" }}>
+            <p className="font-display uppercase tracking-wide text-lg" style={{ color: "var(--wh-text)" }}>No units yet</p>
             <p className="text-sm mt-1">Add your first datasheet to start building the force.</p>
           </div>
         ) : (
@@ -187,16 +187,16 @@ export default function Roster({
       </div>
 
       {!playing && (fixedAddButton ? (
-        <div className="fixed left-0 right-0 p-4" style={{ bottom: 64, background: "linear-gradient(to top, #14161A 60%, transparent)" }}>
+        <div className="fixed left-0 right-0 p-4" style={{ bottom: 64, background: "linear-gradient(to top, var(--wh-bg) 60%, transparent)" }}>
           <button onClick={onAdd} className="w-full max-w-xl mx-auto flex items-center justify-center gap-2 py-4 font-display uppercase tracking-widest text-sm"
-            style={{ background: "#8E1D22", color: "#E8E2D4" }}>
+            style={{ background: "var(--wh-accent)", color: "var(--wh-text)" }}>
             <Plus size={18} /> Add unit
           </button>
         </div>
       ) : (
         <div className="px-4 pt-2">
           <button onClick={onAdd} className="w-full flex items-center justify-center gap-2 py-4 font-display uppercase tracking-widest text-sm"
-            style={{ background: "#8E1D22", color: "#E8E2D4" }}>
+            style={{ background: "var(--wh-accent)", color: "var(--wh-text)" }}>
             <Plus size={18} /> Add unit
           </button>
         </div>

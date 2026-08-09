@@ -10,6 +10,7 @@ import {
 import { checkForDataUpdate } from "./lib/updateNotice.js";
 import { refreshDataFromRemote } from "./lib/remoteData.js";
 import { checkForAppUpdate, downloadAndInstallUpdate } from "./lib/appUpdate.js";
+import { THEME_CSS, loadTheme, saveTheme } from "./lib/theme.js";
 import { shareArmy, importArmy } from "./lib/shareArmy.js";
 import { loadOwned, saveOwned } from "./lib/collection.js";
 import { fetchDetachments, detachmentsForFaction } from "./lib/detachments.js";
@@ -69,10 +70,24 @@ export default function App() {
   const [appUpdate, setAppUpdate] = useState(null);
   const [installingUpdate, setInstallingUpdate] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState(null);
+  const [theme, setThemeState] = useState("codex");
   // Landscape tablets (and wide-enough rotated phones) get a two-pane
   // roster + datasheet split view instead of the datasheet taking over the
   // whole screen. Portrait/narrow layout below this breakpoint is untouched.
   const isWide = useMediaQuery("(min-width: 768px)");
+
+  // Its own small, independent effect (not nested inside the big boot
+  // effect below) so the persisted theme choice — a single fast
+  // window.storage.get — is applied as early as possible, ideally before
+  // the loading spinner even shows, rather than waiting behind catalog/army
+  // loading.
+  useEffect(() => {
+    loadTheme().then(setThemeState);
+  }, []);
+  const handleSetTheme = (id) => {
+    setThemeState(id);
+    saveTheme(id);
+  };
 
   // Each full-screen/overlay view closes on the device back gesture instead
   // of exiting the app.
@@ -387,8 +402,9 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="font-body min-h-screen flex items-center justify-center" style={{ background: "#14161A", color: "#8B929E" }}>
+      <div data-theme={theme} className="font-body min-h-screen flex items-center justify-center" style={{ background: "var(--wh-bg)", color: "var(--wh-muted)" }}>
         <style>{fontCss}</style>
+        <style>{THEME_CSS}</style>
         <Loader2 className="animate-spin" size={28} />
       </div>
     );
@@ -397,8 +413,9 @@ export default function App() {
   const selectedUnit = army && army.units.find((u) => u.instId === selectedUnitId);
 
   return (
-    <div className="font-body min-h-screen" style={{ background: "#14161A", color: "#E8E2D4" }}>
+    <div data-theme={theme} className="font-body min-h-screen" style={{ background: "var(--wh-bg)", color: "var(--wh-text)" }}>
       <style>{fontCss}</style>
+      <style>{THEME_CSS}</style>
       {catalogError && (
         <div className="px-4 py-2 fs11 text-center" style={{ background: "#3A1414", color: "#E8B4B4" }}>
           Couldn't load the unit catalog ({catalogError}). Run <code>npm run sync-data</code> and reload.
@@ -450,7 +467,7 @@ export default function App() {
             army ? (
               isWide ? (
                 <div className="flex" style={{ height: "calc(100vh - 64px)" }}>
-                  <div className="overflow-y-auto shrink-0" style={{ width: 400, borderRight: "1px solid #2A2E36" }}>
+                  <div className="overflow-y-auto shrink-0" style={{ width: 400, borderRight: "1px solid var(--wh-border)" }}>
                     <Roster army={army} detachment={detachment} stratagems={stratagems}
                       onRename={(name) => setArmy((a) => ({ ...a, name }))}
                       onSelect={setSelectedUnitId}
@@ -478,9 +495,9 @@ export default function App() {
                         onRemoveCustomEffect={removeCustomEffect}
                         onToggleWeapon={toggleWeapon} />
                     ) : (
-                      <div className="h-full flex flex-col items-center justify-center text-center px-6" style={{ color: "#6B7280" }}>
-                        <Shield size={28} className="mb-3" style={{ color: "#2A2E36" }} />
-                        <p className="font-display uppercase tracking-wide text-base" style={{ color: "#8B929E" }}>Select a unit</p>
+                      <div className="h-full flex flex-col items-center justify-center text-center px-6" style={{ color: "var(--wh-dim)" }}>
+                        <Shield size={28} className="mb-3" style={{ color: "var(--wh-border)" }} />
+                        <p className="font-display uppercase tracking-wide text-base" style={{ color: "var(--wh-muted)" }}>Select a unit</p>
                         <p className="text-sm mt-1">Its datasheet will open here.</p>
                       </div>
                     )}
@@ -499,12 +516,12 @@ export default function App() {
                   onDeleteUnit={removeUnit} />
               )
             ) : (
-              <div className="pb-24 px-6 pt-24 text-center max-w-xl mx-auto" style={{ color: "#8B929E" }}>
-                <Shield size={28} className="mx-auto mb-3" style={{ color: "#2A2E36" }} />
-                <p className="font-display uppercase tracking-wide text-lg" style={{ color: "#E8E2D4" }}>No army selected</p>
+              <div className="pb-24 px-6 pt-24 text-center max-w-xl mx-auto" style={{ color: "var(--wh-muted)" }}>
+                <Shield size={28} className="mx-auto mb-3" style={{ color: "var(--wh-border)" }} />
+                <p className="font-display uppercase tracking-wide text-lg" style={{ color: "var(--wh-text)" }}>No army selected</p>
                 <p className="text-sm mt-1 mb-5">Pick or start an army to see its units here.</p>
                 <button onClick={() => setTab("armies")} className="px-5 py-3 font-display uppercase tracking-widest text-sm"
-                  style={{ background: "#8E1D22", color: "#E8E2D4" }}>Go to Armies</button>
+                  style={{ background: "var(--wh-accent)", color: "var(--wh-text)" }}>Go to Armies</button>
               </div>
             )
           )}
@@ -514,7 +531,8 @@ export default function App() {
           {tab === "settings" && (
             <Settings meta={meta} onCheckRulesUpdate={handleCheckRulesUpdate}
               appUpdate={appUpdate} installingUpdate={installingUpdate}
-              onCheckAppUpdate={handleCheckAppUpdate} onInstallUpdate={handleInstallUpdate} />
+              onCheckAppUpdate={handleCheckAppUpdate} onInstallUpdate={handleInstallUpdate}
+              theme={theme} onSetTheme={handleSetTheme} />
           )}
 
           <BottomNav tab={tab} onChange={setTab} />

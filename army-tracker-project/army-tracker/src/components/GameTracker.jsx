@@ -134,33 +134,33 @@ export default function GameTracker() {
     <div className="pb-24 px-4 pt-6 max-w-xl mx-auto space-y-3">
       <div className="flex items-baseline justify-between">
         <h1 className="font-display uppercase tracking-wide text-2xl leading-none">Game Tracker</h1>
-        <button onClick={reset} className="flex items-center gap-1.5 fs11 uppercase tracking-widest active:opacity-60" style={{ color: "#8B929E" }}>
+        <button onClick={reset} className="flex items-center gap-1.5 fs11 uppercase tracking-widest active:opacity-60" style={{ color: "var(--wh-muted)" }}>
           <RotateCcw size={13} /> Reset
         </button>
       </div>
 
       <div className="flex gap-1">
         <button onClick={() => setMissionSystem(MISSION_SYSTEMS.FORCE_DISPOSITION)} className="flex-1 fs10 uppercase tracking-widest py-1.5 active:opacity-80"
-          style={{ background: forceDisposition ? "#8E1D22" : "#1E2228", color: forceDisposition ? "#E8E2D4" : "#8B929E" }}>Force Disposition</button>
+          style={{ background: forceDisposition ? "var(--wh-accent)" : "var(--wh-surface)", color: forceDisposition ? "var(--wh-text)" : "var(--wh-muted)" }}>Force Disposition</button>
         <button onClick={() => setMissionSystem(MISSION_SYSTEMS.ETERNAL_WAR)} className="flex-1 fs10 uppercase tracking-widest py-1.5 active:opacity-80"
-          style={{ background: !forceDisposition ? "#8E1D22" : "#1E2228", color: !forceDisposition ? "#E8E2D4" : "#8B929E" }}>Eternal War</button>
+          style={{ background: !forceDisposition ? "var(--wh-accent)" : "var(--wh-surface)", color: !forceDisposition ? "var(--wh-text)" : "var(--wh-muted)" }}>Eternal War</button>
       </div>
 
-      <div className="px-4 py-3" style={{ background: "#1E2228" }}>
-        <div className="fs10 uppercase tracking-widest mb-1.5" style={{ color: "#8B929E" }}>Primary mission</div>
+      <div className="px-4 py-3" style={{ background: "var(--wh-surface)" }}>
+        <div className="fs10 uppercase tracking-widest mb-1.5" style={{ color: "var(--wh-muted)" }}>Primary mission</div>
 
         {forceDisposition ? (
           <>
             <div className="flex items-center gap-2">
               <button onClick={() => setPickingDisposition(true)} className="flex-1 min-w-0 text-left active:opacity-80">
-                <div className="fs9 uppercase tracking-widest" style={{ color: "#6B7280" }}>You</div>
+                <div className="fs9 uppercase tracking-widest" style={{ color: "var(--wh-dim)" }}>You</div>
                 <div className="font-display uppercase tracking-wide text-sm leading-tight truncate">
                   {yourDisposition ? yourDisposition.name : "Set disposition"}
                 </div>
               </button>
-              <span className="fs10 font-display shrink-0" style={{ color: "#6B7280" }}>VS</span>
+              <span className="fs10 font-display shrink-0" style={{ color: "var(--wh-dim)" }}>VS</span>
               <button onClick={() => setPickingOpponentDisposition(true)} className="flex-1 min-w-0 text-right active:opacity-80">
-                <div className="fs9 uppercase tracking-widest" style={{ color: "#6B7280" }}>Opponent</div>
+                <div className="fs9 uppercase tracking-widest" style={{ color: "var(--wh-dim)" }}>Opponent</div>
                 <div className="font-display uppercase tracking-wide text-sm leading-tight truncate">
                   {opponentDisposition ? opponentDisposition.name : "Set disposition"}
                 </div>
@@ -168,64 +168,64 @@ export default function GameTracker() {
             </div>
             {resolvedMission ? (
               <>
-                <div className="font-display uppercase tracking-wide text-sm mt-2" style={{ color: "#B8925A" }}>{resolvedMission.name}</div>
-                {resolvedCard && <div className="fs11 mt-1" style={{ color: "#8B929E" }}>{resolvedCard.text}</div>}
-                <div className="fs9 uppercase tracking-widest mt-1.5" style={{ color: "#6B7280" }}>
+                <div className="font-display uppercase tracking-wide text-sm mt-2" style={{ color: "var(--wh-accent-gold)" }}>{resolvedMission.name}</div>
+                {resolvedCard && <div className="fs11 mt-1" style={{ color: "var(--wh-muted)" }}>{resolvedCard.text}</div>}
+                <div className="fs9 uppercase tracking-widest mt-1.5" style={{ color: "var(--wh-dim)" }}>
                   Cap {resolvedMission.vp_per_round_cap}VP / round · {resolvedMission.vp_per_game_cap}VP / game
                 </div>
               </>
             ) : (
-              <div className="fs11 mt-2" style={{ color: "#6B7280" }}>Set both dispositions to reveal the mission.</div>
+              <div className="fs11 mt-2" style={{ color: "var(--wh-dim)" }}>Set both dispositions to reveal the mission.</div>
             )}
           </>
         ) : (
           <>
             <div className="flex items-center gap-2">
               <button onClick={() => setPickingPrimary(true)} className="flex-1 min-w-0 text-left active:opacity-80">
-                <div className="fs9 uppercase tracking-widest" style={{ color: "#6B7280" }}>You</div>
+                <div className="fs9 uppercase tracking-widest" style={{ color: "var(--wh-dim)" }}>You</div>
                 <div className="font-display uppercase tracking-wide text-sm leading-tight truncate">{primaryMission.name}</div>
               </button>
-              <span className="fs10 font-display shrink-0" style={{ color: "#6B7280" }}>VS</span>
+              <span className="fs10 font-display shrink-0" style={{ color: "var(--wh-dim)" }}>VS</span>
               <button onClick={() => setPickingOpponentPrimary(true)} className="flex-1 min-w-0 text-right active:opacity-80">
-                <div className="fs9 uppercase tracking-widest" style={{ color: "#6B7280" }}>Opponent</div>
+                <div className="fs9 uppercase tracking-widest" style={{ color: "var(--wh-dim)" }}>Opponent</div>
                 <div className="font-display uppercase tracking-wide text-sm leading-tight truncate">
                   {opponentPrimaryMission ? opponentPrimaryMission.name : "Set mission"}
                 </div>
               </button>
             </div>
-            <div className="fs11 mt-2" style={{ color: "#8B929E" }}>{primaryMission.description}</div>
+            <div className="fs11 mt-2" style={{ color: "var(--wh-muted)" }}>{primaryMission.description}</div>
           </>
         )}
 
         <div className="flex items-center justify-between mt-3">
-          <span className="fs11 uppercase tracking-widest" style={{ color: "#8B929E" }}>Points scored</span>
+          <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Points scored</span>
           <div className="flex items-center gap-3">
-            <button onClick={() => set("primaryVp")(Math.max(0, state.primaryVp - 1))} className="font-display text-lg w-8 h-8 flex items-center justify-center" style={{ background: "#0F1115", color: "#E8E2D4" }}>–</button>
+            <button onClick={() => set("primaryVp")(Math.max(0, state.primaryVp - 1))} className="font-display text-lg w-8 h-8 flex items-center justify-center" style={{ background: "var(--wh-surface-alt)", color: "var(--wh-text)" }}>–</button>
             <span className="font-display text-lg tnum w-6 text-center">{state.primaryVp}</span>
-            <button onClick={() => set("primaryVp")(state.primaryVp + 1)} className="font-display text-lg w-8 h-8 flex items-center justify-center" style={{ background: "#0F1115", color: "#E8E2D4" }}>+</button>
+            <button onClick={() => set("primaryVp")(state.primaryVp + 1)} className="font-display text-lg w-8 h-8 flex items-center justify-center" style={{ background: "var(--wh-surface-alt)", color: "var(--wh-text)" }}>+</button>
           </div>
         </div>
       </div>
 
       <Counter label="Command points" value={state.cp} onChange={set("cp")} />
 
-      <div className="flex items-center justify-between px-4 py-3" style={{ background: "#1E2228" }}>
-        <span className="fs11 uppercase tracking-widest" style={{ color: "#8B929E" }}>Total victory points</span>
-        <span className="font-display text-2xl tnum" style={{ color: "#B8925A" }}>{totalVp}</span>
+      <div className="flex items-center justify-between px-4 py-3" style={{ background: "var(--wh-surface)" }}>
+        <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Total victory points</span>
+        <span className="font-display text-2xl tnum" style={{ color: "var(--wh-accent-gold)" }}>{totalVp}</span>
       </div>
 
       <div>
         <div className="flex items-center justify-between">
-          <span className="fs11 uppercase tracking-widest" style={{ color: "#8B929E" }}>Secondary objectives</span>
-          <span className="fs10 uppercase tracking-widest" style={{ color: "#6B7280" }}>
+          <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Secondary objectives</span>
+          <span className="fs10 uppercase tracking-widest" style={{ color: "var(--wh-dim)" }}>
             {tactical ? `${state.tacticalHand.length} / ${TACTICAL_HAND_SIZE} in hand` : `${state.secondarySelections.length} / ${SECONDARY_SELECT_COUNT} selected`}
           </span>
         </div>
         <div className="flex gap-1 mt-2 mb-2">
           <button onClick={() => setSecondaryMode(SECONDARY_MODES.FIXED)} className="flex-1 fs10 uppercase tracking-widest py-1.5 active:opacity-80"
-            style={{ background: !tactical ? "#8E1D22" : "#1E2228", color: !tactical ? "#E8E2D4" : "#8B929E" }}>Fixed</button>
+            style={{ background: !tactical ? "var(--wh-accent)" : "var(--wh-surface)", color: !tactical ? "var(--wh-text)" : "var(--wh-muted)" }}>Fixed</button>
           <button onClick={() => setSecondaryMode(SECONDARY_MODES.TACTICAL)} className="flex-1 fs10 uppercase tracking-widest py-1.5 active:opacity-80"
-            style={{ background: tactical ? "#8E1D22" : "#1E2228", color: tactical ? "#E8E2D4" : "#8B929E" }}>Tactical</button>
+            style={{ background: tactical ? "var(--wh-accent)" : "var(--wh-surface)", color: tactical ? "var(--wh-text)" : "var(--wh-muted)" }}>Tactical</button>
         </div>
 
         {!tactical ? (
@@ -233,18 +233,18 @@ export default function GameTracker() {
             {state.secondarySelections.map((sel) => {
               const mission = secondaryDeck.find((m) => m.name === sel.name);
               return (
-                <div key={sel.name} className="px-4 py-3" style={{ background: "#1E2228" }}>
+                <div key={sel.name} className="px-4 py-3" style={{ background: "var(--wh-surface)" }}>
                   <div className="flex items-center justify-between gap-2">
                     <div className="font-display uppercase tracking-wide text-sm">{sel.name}</div>
-                    {mission?.category && <div className="fs9 uppercase tracking-widest shrink-0" style={{ color: "#6B7280" }}>{mission.category}</div>}
+                    {mission?.category && <div className="fs9 uppercase tracking-widest shrink-0" style={{ color: "var(--wh-dim)" }}>{mission.category}</div>}
                   </div>
-                  {mission && <div className="fs11 mt-1" style={{ color: "#8B929E" }}>{mission.description}</div>}
+                  {mission && <div className="fs11 mt-1" style={{ color: "var(--wh-muted)" }}>{mission.description}</div>}
                   <div className="flex items-center justify-between mt-2">
-                    <span className="fs10 uppercase tracking-widest" style={{ color: "#6B7280" }}>Scored (max {SECONDARY_VP_CAP})</span>
+                    <span className="fs10 uppercase tracking-widest" style={{ color: "var(--wh-dim)" }}>Scored (max {SECONDARY_VP_CAP})</span>
                     <div className="flex items-center gap-3">
-                      <button onClick={() => setSecondaryScore(sel.name, sel.scored - 1)} className="font-display text-lg w-8 h-8 flex items-center justify-center" style={{ background: "#0F1115", color: "#E8E2D4" }}>–</button>
+                      <button onClick={() => setSecondaryScore(sel.name, sel.scored - 1)} className="font-display text-lg w-8 h-8 flex items-center justify-center" style={{ background: "var(--wh-surface-alt)", color: "var(--wh-text)" }}>–</button>
                       <span className="font-display text-lg tnum w-6 text-center">{sel.scored}</span>
-                      <button onClick={() => setSecondaryScore(sel.name, sel.scored + 1)} className="font-display text-lg w-8 h-8 flex items-center justify-center" style={{ background: "#0F1115", color: "#E8E2D4" }}>+</button>
+                      <button onClick={() => setSecondaryScore(sel.name, sel.scored + 1)} className="font-display text-lg w-8 h-8 flex items-center justify-center" style={{ background: "var(--wh-surface-alt)", color: "var(--wh-text)" }}>+</button>
                     </div>
                   </div>
                 </div>
@@ -253,7 +253,7 @@ export default function GameTracker() {
 
             <button onClick={() => setPickingSecondaries(true)}
               className="w-full flex items-center justify-center gap-2 py-3 fs11 uppercase tracking-widest active:opacity-70"
-              style={{ background: "#1E2228", color: "#E8E2D4" }}>
+              style={{ background: "var(--wh-surface)", color: "var(--wh-text)" }}>
               {state.secondarySelections.length === 0 ? "Select secondary objectives" : "Change secondary objectives"}
             </button>
           </div>
@@ -262,20 +262,20 @@ export default function GameTracker() {
             {state.tacticalHand.map((card) => {
               const mission = secondaryDeck.find((m) => m.name === card.name);
               return (
-                <div key={card.name} className="px-4 py-3" style={{ background: "#1E2228" }}>
+                <div key={card.name} className="px-4 py-3" style={{ background: "var(--wh-surface)" }}>
                   <div className="flex items-center justify-between gap-2">
                     <div className="font-display uppercase tracking-wide text-sm">{card.name}</div>
-                    {mission?.category && <div className="fs9 uppercase tracking-widest shrink-0" style={{ color: "#6B7280" }}>{mission.category}</div>}
+                    {mission?.category && <div className="fs9 uppercase tracking-widest shrink-0" style={{ color: "var(--wh-dim)" }}>{mission.category}</div>}
                   </div>
-                  {mission && <div className="fs11 mt-1" style={{ color: "#8B929E" }}>{mission.description}</div>}
+                  {mission && <div className="fs11 mt-1" style={{ color: "var(--wh-muted)" }}>{mission.description}</div>}
                   <div className="flex items-center justify-between mt-2">
                     <button onClick={() => discardTactical(card.name)} className="fs10 uppercase tracking-widest active:opacity-70" style={{ color: "#C97B7B" }}>
                       Discard
                     </button>
                     <div className="flex items-center gap-3">
-                      <button onClick={() => setTacticalScore(card.name, card.scored - 1)} className="font-display text-lg w-8 h-8 flex items-center justify-center" style={{ background: "#0F1115", color: "#E8E2D4" }}>–</button>
+                      <button onClick={() => setTacticalScore(card.name, card.scored - 1)} className="font-display text-lg w-8 h-8 flex items-center justify-center" style={{ background: "var(--wh-surface-alt)", color: "var(--wh-text)" }}>–</button>
                       <span className="font-display text-lg tnum w-6 text-center">{card.scored}</span>
-                      <button onClick={() => setTacticalScore(card.name, card.scored + 1)} className="font-display text-lg w-8 h-8 flex items-center justify-center" style={{ background: "#0F1115", color: "#E8E2D4" }}>+</button>
+                      <button onClick={() => setTacticalScore(card.name, card.scored + 1)} className="font-display text-lg w-8 h-8 flex items-center justify-center" style={{ background: "var(--wh-surface-alt)", color: "var(--wh-text)" }}>+</button>
                     </div>
                   </div>
                 </div>
@@ -285,17 +285,17 @@ export default function GameTracker() {
             {state.tacticalHand.length < TACTICAL_HAND_SIZE && (
               <button onClick={drawTactical} disabled={tacticalPool.length === 0}
                 className="w-full flex items-center justify-center gap-2 py-3 fs11 uppercase tracking-widest active:opacity-70 disabled:opacity-40"
-                style={{ background: "#1E2228", color: "#E8E2D4" }}>
+                style={{ background: "var(--wh-surface)", color: "var(--wh-text)" }}>
                 <Shuffle size={14} /> {tacticalPool.length === 0 ? "No cards left to draw" : "Draw a card"}
               </button>
             )}
 
             {state.tacticalDiscarded.length > 0 && (
               <div className="pt-2">
-                <div className="fs10 uppercase tracking-widest mb-1.5 px-1" style={{ color: "#6B7280" }}>Discarded this game</div>
+                <div className="fs10 uppercase tracking-widest mb-1.5 px-1" style={{ color: "var(--wh-dim)" }}>Discarded this game</div>
                 <div className="space-y-1">
                   {state.tacticalDiscarded.map((c) => (
-                    <div key={c.name} className="flex items-center justify-between px-3 py-1.5 fs11" style={{ background: "#0F1115", color: "#6B7280" }}>
+                    <div key={c.name} className="flex items-center justify-between px-3 py-1.5 fs11" style={{ background: "var(--wh-surface-alt)", color: "var(--wh-dim)" }}>
                       <span>{c.name}</span>
                       <span className="tnum">{c.scored} VP</span>
                     </div>
@@ -308,10 +308,10 @@ export default function GameTracker() {
       </div>
 
       <div>
-        <label className="fs11 uppercase tracking-widest block mb-2" style={{ color: "#8B929E" }}>Notes</label>
+        <label className="fs11 uppercase tracking-widest block mb-2" style={{ color: "var(--wh-muted)" }}>Notes</label>
         <textarea value={state.notes} onChange={(e) => setState((s) => ({ ...s, notes: e.target.value }))}
           rows={6} placeholder="Turn order, stratagem reminders…"
-          className="w-full outline-none p-3 text-sm resize-none" style={{ background: "#1E2228", color: "#E8E2D4" }} />
+          className="w-full outline-none p-3 text-sm resize-none" style={{ background: "var(--wh-surface)", color: "var(--wh-text)" }} />
       </div>
 
       {pickingPrimary && (

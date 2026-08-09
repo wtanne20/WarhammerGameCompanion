@@ -8,14 +8,14 @@ function FactionBadge({ faction, icon }) {
   if (icon) {
     const library = isLibraryIcon(icon);
     return (
-      <div className="shrink-0 overflow-hidden" style={{ width: 40, height: 40, background: library ? "#C9CDD3" : "#0F1115" }}>
+      <div className="shrink-0 overflow-hidden" style={{ width: 40, height: 40, background: library ? "#C9CDD3" : "var(--wh-surface-alt)" }}>
         <img src={library ? encodeURI(withBase(icon)) : icon} alt="" className={library ? "w-full h-full object-contain p-1" : "w-full h-full object-cover"} />
       </div>
     );
   }
   return (
     <div className="shrink-0 flex items-center justify-center font-display uppercase text-sm"
-      style={{ width: 40, height: 40, background: faction ? factionAccent(faction) : "#2A2E36", color: "#E8E2D4" }}>
+      style={{ width: 40, height: 40, background: faction ? factionAccent(faction) : "var(--wh-border)", color: "var(--wh-text)" }}>
       {faction ? faction.charAt(0) : "?"}
     </div>
   );
@@ -25,25 +25,25 @@ export default function ArmyList({ armies, meta, activeArmyId, onSelect, onCreat
   const synced = formatSyncDate(meta);
   return (
     <div className="pb-44 max-w-xl mx-auto">
-      <header className="sticky top-0 z-10 flex items-start justify-between gap-2 px-5 pt-6 pb-4 border-b" style={{ background: "#14161A", borderColor: "#2A2E36" }}>
+      <header className="sticky top-0 z-10 flex items-start justify-between gap-2 px-5 pt-6 pb-4 border-b" style={{ background: "var(--wh-bg)", borderColor: "var(--wh-border)" }}>
         <div className="min-w-0">
           <h1 className="font-display uppercase tracking-wide text-2xl leading-none">Armies</h1>
-          <p className="fs11 uppercase tracking-widest mt-2" style={{ color: "#8B929E" }}>
+          <p className="fs11 uppercase tracking-widest mt-2" style={{ color: "var(--wh-muted)" }}>
             {armies.length} arm{armies.length !== 1 ? "ies" : "y"}
             {meta ? ` · ${meta.unitCount} units` : ""}
             {synced ? ` · data as of ${synced}` : ""}
           </p>
         </div>
-        <button onClick={onImport} className="shrink-0 p-2 active:opacity-70" title="Import army" style={{ color: "#8B929E" }}>
+        <button onClick={onImport} className="shrink-0 p-2 active:opacity-70" title="Import army" style={{ color: "var(--wh-muted)" }}>
           <Upload size={20} />
         </button>
       </header>
 
       <div className="px-4 pt-4">
         {armies.length === 0 ? (
-          <div className="text-center py-16 px-6" style={{ color: "#8B929E" }}>
-            <Shield size={28} className="mx-auto mb-3" style={{ color: "#2A2E36" }} />
-            <p className="font-display uppercase tracking-wide text-lg" style={{ color: "#E8E2D4" }}>No armies yet</p>
+          <div className="text-center py-16 px-6" style={{ color: "var(--wh-muted)" }}>
+            <Shield size={28} className="mx-auto mb-3" style={{ color: "var(--wh-border)" }} />
+            <p className="font-display uppercase tracking-wide text-lg" style={{ color: "var(--wh-text)" }}>No armies yet</p>
             <p className="text-sm mt-1">Start one to begin building a roster.</p>
           </div>
         ) : (
@@ -51,23 +51,23 @@ export default function ArmyList({ armies, meta, activeArmyId, onSelect, onCreat
             {armies.map((a) => {
               const active = a.id === activeArmyId;
               return (
-                <div key={a.id} className="flex items-stretch overflow-hidden" style={{ background: "#1E2228", borderLeft: active ? "3px solid #B8925A" : "3px solid transparent" }}>
+                <div key={a.id} className="flex items-stretch overflow-hidden" style={{ background: "var(--wh-surface)", borderLeft: active ? "3px solid var(--wh-accent-gold)" : "3px solid transparent" }}>
                   <button onClick={() => onSelect(a.id)} className="flex-1 flex items-center gap-3 text-left px-4 py-3 active:opacity-80">
                     <FactionBadge faction={a.faction} icon={a.icon} />
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-display uppercase tracking-wide text-base truncate">{a.name}</span>
-                        {active && <span className="fs9 uppercase tracking-widest shrink-0" style={{ color: "#B8925A" }}>Active</span>}
+                        {active && <span className="fs9 uppercase tracking-widest shrink-0" style={{ color: "var(--wh-accent-gold)" }}>Active</span>}
                       </div>
-                      <div className="fs11 uppercase tracking-widest mt-1" style={{ color: "#8B929E" }}>
+                      <div className="fs11 uppercase tracking-widest mt-1" style={{ color: "var(--wh-muted)" }}>
                         {a.faction || "Unknown faction"} · {a.unitCount} unit{a.unitCount !== 1 ? "s" : ""} · {a.points} pts
                       </div>
                     </div>
                   </button>
-                  <button onClick={() => onShare(a.id)} className="px-4 flex items-center active:opacity-60" style={{ color: "#8B929E" }} title="Share army">
+                  <button onClick={() => onShare(a.id)} className="px-4 flex items-center active:opacity-60" style={{ color: "var(--wh-muted)" }} title="Share army">
                     <Share2 size={16} />
                   </button>
-                  <button onClick={() => onDelete(a.id)} className="px-4 flex items-center active:opacity-60" style={{ color: "#8B929E" }} title="Delete army">
+                  <button onClick={() => onDelete(a.id)} className="px-4 flex items-center active:opacity-60" style={{ color: "var(--wh-muted)" }} title="Delete army">
                     <Trash2 size={16} />
                   </button>
                 </div>
@@ -78,15 +78,15 @@ export default function ArmyList({ armies, meta, activeArmyId, onSelect, onCreat
 
         <p className="fs9 uppercase tracking-widest text-center mt-6" style={{ color: "#4A505A" }}>
           Unit stats &amp; points powered by{" "}
-          <a href="https://40kdc.alpacasoft.dev" target="_blank" rel="noreferrer" style={{ color: "#6B7280", textDecoration: "underline" }}>
+          <a href="https://40kdc.alpacasoft.dev" target="_blank" rel="noreferrer" style={{ color: "var(--wh-dim)", textDecoration: "underline" }}>
             40kdc-data
           </a>
         </p>
       </div>
 
-      <div className="fixed left-0 right-0 p-4" style={{ bottom: 64, background: "linear-gradient(to top, #14161A 60%, transparent)" }}>
+      <div className="fixed left-0 right-0 p-4" style={{ bottom: 64, background: "linear-gradient(to top, var(--wh-bg) 60%, transparent)" }}>
         <button onClick={onCreate} className="w-full max-w-xl mx-auto flex items-center justify-center gap-2 py-4 font-display uppercase tracking-widest text-sm"
-          style={{ background: "#8E1D22", color: "#E8E2D4" }}>
+          style={{ background: "var(--wh-accent)", color: "var(--wh-text)" }}>
           <Plus size={18} /> New army
         </button>
       </div>

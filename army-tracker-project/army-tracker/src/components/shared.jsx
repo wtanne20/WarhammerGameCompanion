@@ -21,12 +21,12 @@ export function weaponLabels(ranged) {
 
 export function Counter({ label, value, onChange, min = 0, max = Infinity, suffix }) {
   return (
-    <div className="flex items-center justify-between px-4 py-3" style={{ background: "#1E2228" }}>
-      <span className="fs11 uppercase tracking-widest" style={{ color: "#8B929E" }}>{label}</span>
+    <div className="flex items-center justify-between px-4 py-3" style={{ background: "var(--wh-surface)" }}>
+      <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>{label}</span>
       <div className="flex items-center gap-4">
-        <button onClick={() => onChange(Math.max(min, value - 1))} className="font-display text-xl w-9 h-9 flex items-center justify-center" style={{ background: "#0F1115", color: "#E8E2D4" }}>–</button>
+        <button onClick={() => onChange(Math.max(min, value - 1))} className="font-display text-xl w-9 h-9 flex items-center justify-center" style={{ background: "var(--wh-surface-alt)", color: "var(--wh-text)" }}>–</button>
         <span className="font-display text-2xl tnum text-center" style={{ minWidth: 40 }}>{value}{suffix || ""}</span>
-        <button onClick={() => onChange(Math.min(max, value + 1))} className="font-display text-xl w-9 h-9 flex items-center justify-center" style={{ background: "#0F1115", color: "#E8E2D4" }}>+</button>
+        <button onClick={() => onChange(Math.min(max, value + 1))} className="font-display text-xl w-9 h-9 flex items-center justify-center" style={{ background: "var(--wh-surface-alt)", color: "var(--wh-text)" }}>+</button>
       </div>
     </div>
   );
@@ -36,8 +36,8 @@ export function StatBlock({ stats, accent, columns = 2, compact = false }) {
   return (
     <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
       {stats.map(({ label, value }, i) => (
-        <div key={label + i} className="text-center overflow-hidden" style={{ background: "#0F1115" }}>
-          <div className={compact ? "fs9 font-semibold uppercase leading-tight py-0.5" : "fs10 font-semibold uppercase tracking-wider py-1 px-1 leading-tight"} style={{ background: accent, color: "#E8E2D4" }}>{label}</div>
+        <div key={label + i} className="text-center overflow-hidden" style={{ background: "var(--wh-surface-alt)" }}>
+          <div className={compact ? "fs9 font-semibold uppercase leading-tight py-0.5" : "fs10 font-semibold uppercase tracking-wider py-1 px-1 leading-tight"} style={{ background: accent, color: "var(--wh-text)" }}>{label}</div>
           <div className={compact ? "font-display text-sm py-1 tnum leading-none" : "font-display text-lg py-2 tnum leading-none"}>{value}</div>
         </div>
       ))}
@@ -48,7 +48,7 @@ export function StatBlock({ stats, accent, columns = 2, compact = false }) {
 export function Placeholder({ unit, big }) {
   const accent = factionAccent(unit.faction);
   return (
-    <div className="absolute inset-0 flex items-center justify-center" style={{ background: `linear-gradient(150deg, ${accent}, #0F1115 85%)` }}>
+    <div className="absolute inset-0 flex items-center justify-center" style={{ background: `linear-gradient(150deg, ${accent}, var(--wh-surface-alt) 85%)` }}>
       <span className="font-display uppercase leading-none select-none" style={{ fontSize: big ? 120 : 56, color: "rgba(232,226,212,0.14)" }}>
         {unit.name.charAt(0)}
       </span>
@@ -60,8 +60,8 @@ export function SectionLabel({ children, icon, accent }) {
   return (
     <div className="flex items-center gap-2">
       {icon && <span style={{ color: accent }}>{icon}</span>}
-      <h2 className="font-display uppercase tracking-widest text-xs" style={{ color: "#8B929E" }}>{children}</h2>
-      <div className="flex-1 h-px" style={{ background: "#2A2E36" }} />
+      <h2 className="font-display uppercase tracking-widest text-xs" style={{ color: "var(--wh-muted)" }}>{children}</h2>
+      <div className="flex-1 h-px" style={{ background: "var(--wh-border)" }} />
     </div>
   );
 }
@@ -85,16 +85,16 @@ function WeaponAbilityChips({ kw, accent }) {
             disabled={!a.description}
             className="fs10 uppercase tracking-widest px-2 py-1 active:opacity-70"
             style={{
-              background: openLabel === a.label ? accent : "#0F1115",
-              color: openLabel === a.label ? "#E8E2D4" : a.description ? "#C5C9D0" : "#6B7280",
+              background: openLabel === a.label ? accent : "var(--wh-surface-alt)",
+              color: openLabel === a.label ? "var(--wh-text)" : a.description ? "var(--wh-text-body)" : "var(--wh-dim)",
             }}>
             {a.label}
           </button>
         ))}
       </div>
       {open && (
-        <div className="fs11 mt-2 px-3 py-2" style={{ background: "#0F1115", color: "#C5C9D0" }}>
-          <span className="font-semibold uppercase" style={{ color: "#B8925A" }}>{open.label}</span> — {open.description}
+        <div className="fs11 mt-2 px-3 py-2" style={{ background: "var(--wh-surface-alt)", color: "var(--wh-text-body)" }}>
+          <span className="font-semibold uppercase" style={{ color: "var(--wh-accent-gold)" }}>{open.label}</span> — {open.description}
         </div>
       )}
     </div>
@@ -109,7 +109,7 @@ export function WeaponTable({ title, weapons, ranged, icon, accent }) {
       <SectionLabel icon={icon} accent={accent}>{title}</SectionLabel>
       <div className="mt-2 space-y-2">
         {weapons.map((w, i) => (
-          <div key={i} className="px-3 py-3" style={{ background: "#1E2228" }}>
+          <div key={i} className="px-3 py-3" style={{ background: "var(--wh-surface)" }}>
             <div className="font-semibold fs15 mb-2">{w.name}</div>
             <StatBlock accent={accent} columns={2}
               stats={[w.range, w.A, w.skill, w.S, w.AP, w.D].map((value, j) => ({ label: labels[j], value }))} />
@@ -132,9 +132,9 @@ export function UnitTile({ unit, armyUnits = [], selected = false, editing = fal
   const leading = armyUnits.find((u) => u.leaderInstId === unit.instId);
 
   return (
-    <div className="w-full flex items-stretch overflow-hidden" style={{ background: selected ? "#262B33" : "#1E2228" }}>
+    <div className="w-full flex items-stretch overflow-hidden" style={{ background: selected ? "var(--wh-surface-selected)" : "var(--wh-surface)" }}>
       <button onClick={onClick} className="flex-1 min-w-0 flex items-stretch text-left active:opacity-80 transition-opacity">
-        <div style={{ width: 4, background: selected ? "#8E1D22" : accent, flexShrink: 0 }} />
+        <div style={{ width: 4, background: selected ? "var(--wh-accent)" : accent, flexShrink: 0 }} />
         <div className="relative shrink-0 overflow-hidden" style={{ width: 72 }}>
           {unit.photo ? (
             <img src={unit.photo} alt={unit.name} className="absolute inset-0 w-full h-full object-cover" />
@@ -144,18 +144,18 @@ export function UnitTile({ unit, armyUnits = [], selected = false, editing = fal
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="font-display uppercase tracking-wide text-sm leading-tight truncate">{unit.name}</div>
-              <div className="fs9 uppercase tracking-widest mt-0.5" style={{ color: "#8B929E" }}>
+              <div className="fs9 uppercase tracking-widest mt-0.5" style={{ color: "var(--wh-muted)" }}>
                 {unit.faction}{opt ? ` · ${opt.description}` : ""}
               </div>
               {(leader || leading) && (
-                <div className="flex items-center gap-1 fs9 uppercase tracking-widest mt-0.5" style={{ color: "#B8925A" }}>
+                <div className="flex items-center gap-1 fs9 uppercase tracking-widest mt-0.5" style={{ color: "var(--wh-accent-gold)" }}>
                   <Link2 size={10} />
                   {leader ? `Led by ${leader.name}` : `Leading ${leading.name}`}
                 </div>
               )}
             </div>
             <div className="text-right shrink-0">
-              <div className="font-display text-sm tnum" style={{ color: "#B8925A" }}>{unitPoints(unit)}</div>
+              <div className="font-display text-sm tnum" style={{ color: "var(--wh-accent-gold)" }}>{unitPoints(unit)}</div>
               {damaged && <div className="fs9 tnum mt-0.5" style={{ color: "#D98C4A" }}>{wounds}/{wMax} W</div>}
             </div>
           </div>
@@ -168,14 +168,14 @@ export function UnitTile({ unit, armyUnits = [], selected = false, editing = fal
         </div>
       </button>
       {editing && (
-        <div className="flex flex-col shrink-0" style={{ width: 40, borderLeft: "1px solid #14161A" }}>
+        <div className="flex flex-col shrink-0" style={{ width: 40, borderLeft: "1px solid var(--wh-bg)" }}>
           <button onClick={(e) => { e.stopPropagation(); onDuplicate && onDuplicate(); }}
-            className="flex-1 flex items-center justify-center active:opacity-70" title="Duplicate unit" style={{ color: "#8B929E" }}>
+            className="flex-1 flex items-center justify-center active:opacity-70" title="Duplicate unit" style={{ color: "var(--wh-muted)" }}>
             <Copy size={15} />
           </button>
           <button onClick={(e) => { e.stopPropagation(); onDelete && onDelete(); }}
             className="flex-1 flex items-center justify-center active:opacity-70 border-t" title="Delete unit"
-            style={{ color: "#C97B7B", borderColor: "#14161A" }}>
+            style={{ color: "#C97B7B", borderColor: "var(--wh-bg)" }}>
             <Trash2 size={15} />
           </button>
         </div>

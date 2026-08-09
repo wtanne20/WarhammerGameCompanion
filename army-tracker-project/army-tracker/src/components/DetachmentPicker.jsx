@@ -11,28 +11,28 @@ export default function DetachmentPicker({ detachments, onClose, onPick }) {
 
   return (
     <div className="fixed inset-0 z-20 flex flex-col justify-end" style={{ background: "rgba(0,0,0,0.6)" }} onClick={onClose}>
-      <div className="max-w-xl w-full mx-auto overflow-y-auto" style={{ background: "#14161A", borderTop: "2px solid #8E1D22", maxHeight: "85vh" }} onClick={(e) => e.stopPropagation()}>
-        <div className="sticky top-0 z-10" style={{ background: "#14161A" }}>
+      <div className="max-w-xl w-full mx-auto overflow-y-auto" style={{ background: "var(--wh-bg)", borderTop: "2px solid var(--wh-accent)", maxHeight: "85vh" }} onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 z-10" style={{ background: "var(--wh-bg)" }}>
           <div className="flex items-center justify-between px-5 py-4">
             <h2 className="font-display uppercase tracking-wide text-lg">Choose a detachment</h2>
-            <button onClick={onClose} className="p-1" style={{ color: "#8B929E" }}><X size={20} /></button>
+            <button onClick={onClose} className="p-1" style={{ color: "var(--wh-muted)" }}><X size={20} /></button>
           </div>
           <div className="px-4 pb-3">
             <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search detachments…"
-              className="w-full outline-none py-3 px-3 text-sm" style={{ background: "#1E2228", color: "#E8E2D4" }} />
+              className="w-full outline-none py-3 px-3 text-sm" style={{ background: "var(--wh-surface)", color: "var(--wh-text)" }} />
           </div>
         </div>
 
         <div className="px-4 pb-6 space-y-2">
           {results.length === 0 && (
-            <div className="text-center py-10 fs11 uppercase tracking-widest" style={{ color: "#8B929E" }}>
+            <div className="text-center py-10 fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>
               {query ? `No detachments match "${q}"` : "No detachments available for this faction"}
             </div>
           )}
           {results.map((d) => (
-            <button key={d.id} onClick={() => onPick(d.id)} className="w-full text-left px-4 py-3 active:opacity-80" style={{ background: "#1E2228" }}>
+            <button key={d.id} onClick={() => onPick(d.id)} className="w-full text-left px-4 py-3 active:opacity-80" style={{ background: "var(--wh-surface)" }}>
               <div className="font-display uppercase tracking-wide text-base">{d.name}</div>
-              <div className="fs11 uppercase tracking-widest mt-1" style={{ color: "#8B929E" }}>
+              <div className="fs11 uppercase tracking-widest mt-1" style={{ color: "var(--wh-muted)" }}>
                 {d.abilities.length} rule{d.abilities.length !== 1 ? "s" : ""}{d.enhancements.length ? ` · ${d.enhancements.length} enhancements` : ""}
               </div>
             </button>

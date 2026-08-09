@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
+import { Check } from "lucide-react";
 import { SectionLabel, formatSyncDate } from "./shared.jsx";
+import { THEMES } from "../lib/theme.js";
 
 function Row({ label, description, right }) {
   return (
-    <div className="flex items-center justify-between gap-3 px-4 py-3.5" style={{ background: "#1E2228" }}>
+    <div className="flex items-center justify-between gap-3 px-4 py-3.5" style={{ background: "var(--wh-surface)" }}>
       <div className="min-w-0">
         <div className="font-display uppercase tracking-wide text-sm">{label}</div>
-        {description && <div className="fs11 mt-0.5" style={{ color: "#8B929E" }}>{description}</div>}
+        {description && <div className="fs11 mt-0.5" style={{ color: "var(--wh-muted)" }}>{description}</div>}
       </div>
       {right && <div className="shrink-0">{right}</div>}
     </div>
@@ -19,7 +21,7 @@ function ActionButton({ children, ...props }) {
   return (
     <button {...props}
       className="shrink-0 px-3 py-1.5 fs10 uppercase tracking-widest active:opacity-70 disabled:opacity-50"
-      style={{ background: "#2A2E36", color: "#E8E2D4" }}>
+      style={{ background: "var(--wh-border)", color: "var(--wh-text)" }}>
       {children}
     </button>
   );
@@ -27,7 +29,7 @@ function ActionButton({ children, ...props }) {
 
 function StatusLine({ children, tone = "neutral" }) {
   return (
-    <p className="fs11 px-1 -mt-1" style={{ color: tone === "good" ? "#8AD9A8" : tone === "bad" ? "#C97B7B" : "#6B7280" }}>
+    <p className="fs11 px-1 -mt-1" style={{ color: tone === "good" ? "#8AD9A8" : tone === "bad" ? "#C97B7B" : "var(--wh-dim)" }}>
       {children}
     </p>
   );
@@ -118,6 +120,34 @@ function RulesUpdateRow({ meta, onCheckRulesUpdate }) {
   );
 }
 
+// Each swatch previews its OWN theme's colors, not the currently-active
+// one — so this reads raw hex straight from THEMES rather than the
+// var(--wh-*) chrome variables (which only ever reflect whichever theme is
+// applied right now).
+function ThemePicker({ theme, onSetTheme }) {
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {Object.entries(THEMES).map(([id, palette]) => {
+        const selected = id === theme;
+        return (
+          <button key={id} onClick={() => onSetTheme(id)}
+            className="flex flex-col items-center gap-1.5 py-3 active:opacity-80"
+            style={{ background: "var(--wh-surface)", border: `2px solid ${selected ? "var(--wh-accent-gold)" : "transparent"}` }}>
+            <div className="relative rounded-full overflow-hidden" style={{ width: 32, height: 32, background: `linear-gradient(135deg, ${palette.accent} 50%, ${palette.accentGold} 50%)` }}>
+              {selected && (
+                <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.35)" }}>
+                  <Check size={16} color="#fff" />
+                </div>
+              )}
+            </div>
+            <span className="fs9 uppercase tracking-widest text-center leading-tight" style={{ color: "var(--wh-text)" }}>{palette.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function SettingsSection({ title, children }) {
   return (
     <section className="px-4 pt-6">
@@ -127,10 +157,10 @@ function SettingsSection({ title, children }) {
   );
 }
 
-export default function Settings({ meta, onCheckRulesUpdate, appUpdate, installingUpdate, onCheckAppUpdate, onInstallUpdate }) {
+export default function Settings({ meta, onCheckRulesUpdate, appUpdate, installingUpdate, onCheckAppUpdate, onInstallUpdate, theme, onSetTheme }) {
   return (
     <div className="pb-24 max-w-xl mx-auto">
-      <header className="sticky top-0 z-10 px-5 pt-6 pb-4 border-b" style={{ background: "#14161A", borderColor: "#2A2E36" }}>
+      <header className="sticky top-0 z-10 px-5 pt-6 pb-4 border-b" style={{ background: "var(--wh-bg)", borderColor: "var(--wh-border)" }}>
         <h1 className="font-display uppercase tracking-wide text-2xl leading-none">Settings</h1>
       </header>
 
@@ -141,18 +171,13 @@ export default function Settings({ meta, onCheckRulesUpdate, appUpdate, installi
       </SettingsSection>
 
       <SettingsSection title="Appearance">
-        <Row label="Color theme" description="Codex (default)"
-          right={
-            <span className="fs9 uppercase tracking-widest px-2 py-1" style={{ background: "#2A2E36", color: "#6B7280" }}>
-              Coming soon
-            </span>
-          } />
+        <ThemePicker theme={theme} onSetTheme={onSetTheme} />
       </SettingsSection>
 
       <SettingsSection title="About">
-        <div className="px-4 py-3 fs11" style={{ background: "#1E2228", color: "#8B929E" }}>
+        <div className="px-4 py-3 fs11" style={{ background: "var(--wh-surface)", color: "var(--wh-muted)" }}>
           Unit stats &amp; points from{" "}
-          <a href="https://40kdc.alpacasoft.dev" target="_blank" rel="noreferrer" style={{ color: "#B8925A", textDecoration: "underline" }}>
+          <a href="https://40kdc.alpacasoft.dev" target="_blank" rel="noreferrer" style={{ color: "var(--wh-accent-gold)", textDecoration: "underline" }}>
             40kdc-data
           </a>
           . Rules text from Wahapedia.
