@@ -84,7 +84,7 @@ export default function ArmyList({ armies, meta, activeArmyId, onSelect, onCreat
         </p>
       </div>
 
-      <div className="fixed left-0 right-0 p-4" style={{ bottom: 64, background: "linear-gradient(to top, var(--wh-bg) 60%, transparent)" }}>
+      <div className="fixed left-0 right-0 p-4" style={{ bottom: "calc(64px + env(safe-area-inset-bottom))", background: "linear-gradient(to top, var(--wh-bg) 60%, transparent)" }}>
         <button onClick={onCreate} className="w-full max-w-xl mx-auto flex items-center justify-center gap-2 py-4 font-display uppercase tracking-widest text-sm"
           style={{ background: "var(--wh-accent)", color: "var(--wh-text)" }}>
           <Plus size={18} /> New army

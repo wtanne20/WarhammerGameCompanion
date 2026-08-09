@@ -50,8 +50,19 @@ export async function checkForAppUpdate() {
 // Downloads the update APK and hands it to the system installer (which the
 // user still has to confirm). Throws on failure — caller decides how to
 // surface that.
+//
+// Installing an update doesn't restart the app that triggered it — Android
+// replaces the APK on disk, but this process keeps running with the OLD
+// code already loaded in memory (the WebView doesn't reload itself just
+// because the files under it changed). Left alone, tapping back into the
+// app after installing would show the same stale version until the next
+// full cold start. Closing our own process right after handing off to the
+// installer forces that: the installer's own "Open"/re-launch (or the user
+// tapping the icon again) then starts a genuinely fresh process that loads
+// the new build.
 export async function downloadAndInstallUpdate(downloadUrl) {
   const { uri } = await Filesystem.getUri({ path: "army-tracker-update.apk", directory: Directory.Cache });
   await FileTransfer.downloadFile({ url: downloadUrl, path: uri });
   await FileOpener.open({ filePath: uri, contentType: "application/vnd.android.package-archive" });
+  await CapacitorApp.exitApp();
 }
