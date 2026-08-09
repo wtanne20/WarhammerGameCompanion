@@ -1,4 +1,4 @@
-import { Boxes, Shield, Swords, ClipboardList } from "lucide-react";
+import { Boxes, Shield, Swords, ClipboardList, Settings } from "lucide-react";
 
 // "Roster" (not "Units") to keep this visually distinct from the "My Units"
 // collection tab — same underlying screen/state key as before, just a
@@ -8,6 +8,7 @@ const TABS = [
   { id: "armies", label: "Armies", icon: Shield },
   { id: "units", label: "Roster", icon: Swords },
   { id: "tracker", label: "Game", icon: ClipboardList },
+  { id: "settings", label: "Settings", icon: Settings },
 ];
 
 export default function BottomNav({ tab, onChange }) {

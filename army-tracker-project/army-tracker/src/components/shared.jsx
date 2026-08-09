@@ -8,6 +8,13 @@ export const STAT_LABELS = {
   M: "Movement", T: "Toughness", Sv: "Save", W: "Wounds", Ld: "Leadership", OC: "Objective Control",
 };
 
+export function formatSyncDate(meta) {
+  if (!meta?.lastUpdate) return null;
+  const d = new Date(meta.lastUpdate.replace(" ", "T"));
+  if (Number.isNaN(d.getTime())) return meta.lastUpdate;
+  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
 export function weaponLabels(ranged) {
   return ["Range", "Attacks", ranged ? "Ballistic Skill" : "Weapon Skill", "Strength", "Armour Penetration", "Damage"];
 }

@@ -29,6 +29,7 @@ import DetachmentPicker from "./components/DetachmentPicker.jsx";
 import IconPicker from "./components/IconPicker.jsx";
 import GameTracker from "./components/GameTracker.jsx";
 import MyUnits from "./components/MyUnits.jsx";
+import Settings from "./components/Settings.jsx";
 
 const fontCss = `
   @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
@@ -87,6 +88,21 @@ export default function App() {
     () => (army?.detachmentId ? detachments.find((d) => d.id === army.detachmentId) : null) || null,
     [army, detachments]
   );
+
+  // Swaps freshly-fetched catalog/detachment/stratagem data into state and
+  // re-runs every stored army against it — shared by the native boot-time
+  // refresh below and the manual "Check now" trigger in Settings.jsx, so
+  // both paths apply a fresh pull the same way. Returns how many armies
+  // actually changed, for the "data updated" notice.
+  const applyFreshCatalog = async (freshCatalog, freshDetachments, freshStratagems) => {
+    setCatalog(freshCatalog.units);
+    setMeta(freshCatalog.meta);
+    if (freshDetachments) setDetachments(freshDetachments);
+    if (freshStratagems) setStratagems(freshStratagems);
+    const refreshedCount = await refreshAllArmies(freshCatalog.units);
+    setArmy((a) => (a ? { ...a, units: refreshUnits(a.units, freshCatalog.units) } : a));
+    return refreshedCount;
+  };
 
   useEffect(() => {
     (async () => {
@@ -147,12 +163,7 @@ export default function App() {
             fetchDetachments().catch(() => null),
             fetchStratagems().catch(() => null),
           ]);
-          setCatalog(freshCatalog.units);
-          setMeta(freshCatalog.meta);
-          if (freshDetachments) setDetachments(freshDetachments);
-          if (freshStratagems) setStratagems(freshStratagems);
-          const refreshedCount = await refreshAllArmies(freshCatalog.units);
-          setArmy((a) => (a ? { ...a, units: refreshUnits(a.units, freshCatalog.units) } : a));
+          const refreshedCount = await applyFreshCatalog(freshCatalog, freshDetachments, freshStratagems);
           if (await checkForDataUpdate(freshCatalog.meta)) {
             setUpdateNotice(dataUpdatedMessage(refreshedCount));
           }
@@ -238,6 +249,51 @@ export default function App() {
       console.error("Failed to download/install update", err);
     } finally {
       setInstallingUpdate(false);
+    }
+  };
+
+  // Manual "Check now" trigger from Settings.jsx — re-runs the same checks
+  // the boot effect does on native, but also works on web (which is already
+  // served fresh on every load, so this mostly catches a sync that landed
+  // in the last few minutes) rather than being a no-op there.
+  const handleCheckRulesUpdate = async () => {
+    try {
+      if (Capacitor.isNativePlatform()) {
+        const remoteMeta = await refreshDataFromRemote(meta);
+        if (!remoteMeta) return { updated: false };
+        const [freshCatalog, freshDetachments, freshStratagems] = await Promise.all([
+          fetchCatalog(),
+          fetchDetachments().catch(() => null),
+          fetchStratagems().catch(() => null),
+        ]);
+        const refreshedCount = await applyFreshCatalog(freshCatalog, freshDetachments, freshStratagems);
+        if (await checkForDataUpdate(freshCatalog.meta)) setUpdateNotice(dataUpdatedMessage(refreshedCount));
+        return { updated: true };
+      }
+
+      const freshCatalog = await fetchCatalog();
+      if (!freshCatalog.meta?.syncedAt || freshCatalog.meta.syncedAt === meta?.syncedAt) return { updated: false };
+      const [freshDetachments, freshStratagems] = await Promise.all([
+        fetchDetachments().catch(() => null),
+        fetchStratagems().catch(() => null),
+      ]);
+      const refreshedCount = await applyFreshCatalog(freshCatalog, freshDetachments, freshStratagems);
+      if (await checkForDataUpdate(freshCatalog.meta)) setUpdateNotice(dataUpdatedMessage(refreshedCount));
+      return { updated: true };
+    } catch (err) {
+      console.error("Failed to check for rules data update", err);
+      return { updated: false, error: true };
+    }
+  };
+
+  const handleCheckAppUpdate = async () => {
+    try {
+      const result = await checkForAppUpdate();
+      setAppUpdate(result);
+      return result;
+    } catch (err) {
+      console.error("Failed to check for app update", err);
+      return null;
     }
   };
 
@@ -454,6 +510,12 @@ export default function App() {
           )}
 
           {tab === "tracker" && <GameTracker />}
+
+          {tab === "settings" && (
+            <Settings meta={meta} onCheckRulesUpdate={handleCheckRulesUpdate}
+              appUpdate={appUpdate} installingUpdate={installingUpdate}
+              onCheckAppUpdate={handleCheckAppUpdate} onInstallUpdate={handleInstallUpdate} />
+          )}
 
           <BottomNav tab={tab} onChange={setTab} />
         </>

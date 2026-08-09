@@ -2,13 +2,7 @@ import { Plus, Trash2, Shield, Share2, Upload } from "lucide-react";
 import { factionAccent } from "../lib/catalog.js";
 import { isLibraryIcon } from "../lib/icons.js";
 import { withBase } from "../lib/paths.js";
-
-function formatSyncDate(meta) {
-  if (!meta?.lastUpdate) return null;
-  const d = new Date(meta.lastUpdate.replace(" ", "T"));
-  if (Number.isNaN(d.getTime())) return meta.lastUpdate;
-  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-}
+import { formatSyncDate } from "./shared.jsx";
 
 function FactionBadge({ faction, icon }) {
   if (icon) {
