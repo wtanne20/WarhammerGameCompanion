@@ -8,7 +8,7 @@ import { Capacitor } from "@capacitor/core";
 import { Share } from "@capacitor/share";
 import { Filesystem, Directory } from "@capacitor/filesystem";
 import { uid } from "./id.js";
-import { loadArmy, createArmy, saveArmy } from "./armies.js";
+import { loadArmy, createArmy, saveArmy, setUnitPhoto } from "./armies.js";
 
 const KIND = "army-tracker-army";
 const VERSION = 1;
@@ -17,11 +17,16 @@ function slugify(name) {
   return (name || "army").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-+|-+$)/g, "") || "army";
 }
 
-// Per-unit fields that are this device's in-game/local state rather than
+// Per-unit fields that are this device's in-game/session state rather than
 // part of "the list" — same fields duplicateUnit() already resets for a
-// fresh copy within one army, for the same reason.
+// fresh copy within one army, for the same reason. Photos travel WITH the
+// export (unlike those) since they're part of what makes a list someone's
+// own — they're already downscaled/compressed client-side (compressImage,
+// max 500px/JPEG q0.75, ~50-120KB each) before ever reaching storage, so
+// embedding them inline as base64 keeps the export a single self-contained
+// file without needing a separate asset bundle.
 function stripUnit(u) {
-  const { photo, woundsRemaining, customEffects, leaderInstId, ...rest } = u;
+  const { woundsRemaining, customEffects, leaderInstId, ...rest } = u;
   return rest;
 }
 
@@ -86,12 +91,13 @@ export function parseArmyImport(text) {
 
 export async function importArmy(armyData) {
   const created = await createArmy(armyData.name, armyData.faction ?? null);
-  const army = {
-    ...created,
-    icon: armyData.icon,
-    detachmentId: armyData.detachmentId,
-    units: (armyData.units || []).map((u) => ({ ...u, instId: uid() })),
-  };
+  const units = (armyData.units || []).map((u) => ({ ...u, instId: uid() }));
+  // Photos live in their own per-instId storage key, not inline on the army
+  // record (see armies.js's saveArmy, which strips `photo` before writing)
+  // — so a freshly-generated instId needs its photo persisted separately,
+  // same as setPhoto() does for a photo taken/picked normally.
+  await Promise.all(units.filter((u) => u.photo).map((u) => setUnitPhoto(u.instId, u.photo)));
+  const army = { ...created, icon: armyData.icon, detachmentId: armyData.detachmentId, units };
   await saveArmy(army);
   return army;
 }
