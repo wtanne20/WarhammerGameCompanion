@@ -85,6 +85,22 @@ function stripHtml(input) {
     .trim();
 }
 
+// A handful of core-rules library abilities (Scouts, Feel No Pain, Deadly
+// Demise, Firing Deck) are written as a generic template with a literal "X"
+// placeholder ("This ability always takes the form Scouts X\""), and each
+// datasheet's own row in Datasheets_abilities.csv carries the real value in
+// its `parameter` column (e.g. "6\"") — Wahapedia's own datasheet pages
+// splice these together (shown as "SCOUTS 6\""), but this CSV export keeps
+// them separate, so it's redone here. Only touches text that actually
+// contains the placeholder, so an unrelated non-empty `parameter` on some
+// other ability (seen once, on a Faction ability that doesn't use this
+// template) is safely ignored rather than mangling its name.
+const ABILITY_PARAMETER_PLACEHOLDER = /\bX["+]?/g;
+function fillAbilityParameter(name, text, parameter) {
+  if (!parameter || !text.match(ABILITY_PARAMETER_PLACEHOLDER)) return { name, text };
+  return { name: `${name} ${parameter}`, text: text.replace(ABILITY_PARAMETER_PLACEHOLDER, parameter) };
+}
+
 // Detachment/enhancement rule text wraps real game keywords like
 // <span class="kwb">ADEPTUS</span> — a much stronger signal for matching a
 // rule against a unit's own keywords than scanning arbitrary English. Must
@@ -196,11 +212,12 @@ function buildWahapediaCatalog({
       const dsAbilities = (abilitiesByDs.get(d.id) || [])
         .map((a) => {
           const lib = a.ability_id ? abilityLib.get(a.ability_id) : null;
-          return {
-            name: lib ? lib.name : a.name,
-            text: stripHtml(lib ? lib.description : a.description),
-            type: a.type,
-          };
+          const { name, text } = fillAbilityParameter(
+            lib ? lib.name : a.name,
+            stripHtml(lib ? lib.description : a.description),
+            a.parameter
+          );
+          return { name, text, type: a.type };
         })
         .filter((a) => a.name);
 

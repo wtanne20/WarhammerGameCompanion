@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { stratagemsForDetachment } from "../lib/stratagems.js";
+import { AbilityText } from "./shared.jsx";
 
 function StratagemRow({ s, accent }) {
   const [open, setOpen] = useState(false);
@@ -17,7 +18,7 @@ function StratagemRow({ s, accent }) {
       {open && (
         <div className="px-3 pb-3 fs11" style={{ color: "var(--wh-text-body)" }}>
           {s.legend && <p className="italic mb-2" style={{ color: "var(--wh-muted)" }}>{s.legend}</p>}
-          <p style={{ whiteSpace: "pre-line" }}>{s.text}</p>
+          <div><AbilityText text={s.text} accent={accent} /></div>
         </div>
       )}
     </div>

@@ -49,7 +49,7 @@ export function compositionOption(unit) {
 }
 
 export function unitPoints(unit) {
-  return compositionOption(unit)?.points ?? 0;
+  return (compositionOption(unit)?.points ?? 0) + (unit.enhancementPoints ?? 0);
 }
 
 export function cheapestPoints(catalogEntry) {
@@ -85,7 +85,7 @@ export function currentWounds(unit) {
 // (updated stats/points/rules included) while keeping everything that's
 // actually about *this instance*, not the datasheet.
 const INSTANCE_FIELDS = [
-  "instId", "compositionIndex", "photo", "leaderInstId", "enhancementId",
+  "instId", "compositionIndex", "photo", "leaderInstId", "enhancementId", "enhancementPoints",
   "woundsRemaining", "customEffects", "weaponSelection",
 ];
 

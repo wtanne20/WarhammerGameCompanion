@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link2, Unlink, X, Plus, AlertTriangle } from "lucide-react";
 import { unitMatchesAbility } from "../lib/detachments.js";
-import { SectionLabel } from "./shared.jsx";
+import { SectionLabel, AbilityText } from "./shared.jsx";
 
 function Chip({ active, accent, onClick, children }) {
   return (
@@ -61,7 +61,7 @@ export default function EffectsPanel({
             ) : leaderAbilities.map((ab, i) => (
               <div key={i} className="mt-2">
                 <span className="font-semibold" style={{ color: "var(--wh-accent-gold)" }}>{ab.name}.</span>{" "}
-                <span style={{ color: "var(--wh-text-body)", whiteSpace: "pre-line" }}>{ab.text}</span>
+                <AbilityText text={ab.text} accent={accent} />
               </div>
             ))}
           </div>
@@ -128,7 +128,7 @@ export default function EffectsPanel({
                     <AlertTriangle size={11} /> Also assigned elsewhere — an army normally carries only one
                   </div>
                 )}
-                <span style={{ color: "var(--wh-text-body)", whiteSpace: "pre-line" }}>{selectedEnhancement.text}</span>
+                <AbilityText text={selectedEnhancement.text} accent={accent} />
               </div>
             )}
           </div>
@@ -138,7 +138,7 @@ export default function EffectsPanel({
           <div key={i} className="px-3 py-2" style={{ background: "var(--wh-surface)" }}>
             <div className="fs10 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Possible detachment bonus — verify</div>
             <span className="font-semibold" style={{ color: "var(--wh-accent-gold)" }}>{a.name}.</span>{" "}
-            <span style={{ color: "var(--wh-text-body)", whiteSpace: "pre-line" }}>{a.text}</span>
+            <AbilityText text={a.text} accent={accent} />
           </div>
         ))}
 

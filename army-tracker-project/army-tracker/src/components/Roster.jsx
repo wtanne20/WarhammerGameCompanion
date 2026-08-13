@@ -3,7 +3,7 @@ import { Plus, RotateCcw, ChevronRight, ChevronDown, ImagePlus } from "lucide-re
 import { armyPoints, factionAccent } from "../lib/catalog.js";
 import { isLibraryIcon } from "../lib/icons.js";
 import { withBase } from "../lib/paths.js";
-import { UnitTile, SectionLabel } from "./shared.jsx";
+import { UnitTile, SectionLabel, AbilityText } from "./shared.jsx";
 import StratagemsPanel from "./StratagemsPanel.jsx";
 
 function ArmyIcon({ icon, accent, editable, onClick }) {
@@ -54,7 +54,7 @@ function groupByRole(units) {
   return [...known, ...rest].map((category) => [category, groups.get(category).sort((a, b) => a.name.localeCompare(b.name))]);
 }
 
-function DetachmentCard({ detachment, playing, onOpenDetachmentPicker }) {
+function DetachmentCard({ detachment, playing, onOpenDetachmentPicker, accent }) {
   const [expanded, setExpanded] = useState(false);
   return (
     <div style={{ background: "var(--wh-surface)" }}>
@@ -79,7 +79,7 @@ function DetachmentCard({ detachment, playing, onOpenDetachmentPicker }) {
           {detachment.abilities.map((a, i) => (
             <div key={i}>
               <div className="font-semibold" style={{ color: "var(--wh-accent-gold)" }}>{a.name}</div>
-              <div className="text-sm mt-0.5" style={{ color: "var(--wh-text-body)", whiteSpace: "pre-line" }}>{a.text}</div>
+              <div className="text-sm mt-0.5"><AbilityText text={a.text} accent={accent} /></div>
             </div>
           ))}
         </div>
@@ -142,7 +142,7 @@ export default function Roster({
 
       <div className="px-4 pt-4">
         {detachment ? (
-          <DetachmentCard detachment={detachment} playing={playing} onOpenDetachmentPicker={onOpenDetachmentPicker} />
+          <DetachmentCard detachment={detachment} playing={playing} onOpenDetachmentPicker={onOpenDetachmentPicker} accent={accent} />
         ) : !playing ? (
           <button onClick={onOpenDetachmentPicker} className="w-full flex items-center justify-between px-4 py-3 active:opacity-80" style={{ background: "var(--wh-surface)" }}>
             <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Choose a detachment</span>

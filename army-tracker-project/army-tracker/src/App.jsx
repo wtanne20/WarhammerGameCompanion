@@ -373,7 +373,13 @@ export default function App() {
     }));
   };
   const setEnhancement = (instId, enhancementId) => {
-    setArmy((a) => ({ ...a, units: a.units.map((u) => (u.instId === instId ? { ...u, enhancementId } : u)) }));
+    // Points are frozen onto the unit at selection time (rather than looked
+    // up fresh from `detachment` every time points are totaled) so army
+    // totals stay correct wherever they're computed — including armies.js's
+    // saveArmy(), which persists a points snapshot without any detachment
+    // data in scope.
+    const enhancementPoints = enhancementId ? detachment?.enhancements?.find((e) => e.id === enhancementId)?.points ?? 0 : 0;
+    setArmy((a) => ({ ...a, units: a.units.map((u) => (u.instId === instId ? { ...u, enhancementId, enhancementPoints } : u)) }));
   };
   const addCustomEffect = (instId, text) => {
     setArmy((a) => ({

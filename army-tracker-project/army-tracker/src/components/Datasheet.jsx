@@ -3,7 +3,7 @@ import { ChevronLeft, Trash2, Shield, Swords, Loader2, Camera } from "lucide-rea
 import { factionAccent, unitPoints, currentWounds, maxWounds, compositionOption, selectedWeapons } from "../lib/catalog.js";
 import { compressImage } from "../lib/image.js";
 import { useCloseOnBack } from "../lib/useCloseOnBack.js";
-import { Placeholder, SectionLabel, WeaponTable, StatBlock, Counter, STAT_ORDER, STAT_LABELS } from "./shared.jsx";
+import { Placeholder, SectionLabel, WeaponTable, StatBlock, Counter, AbilityText, STAT_ORDER, STAT_LABELS } from "./shared.jsx";
 import EffectsPanel from "./EffectsPanel.jsx";
 import WeaponSelector from "./WeaponSelector.jsx";
 import PhotoSourceSheet from "./PhotoSourceSheet.jsx";
@@ -153,7 +153,7 @@ export default function Datasheet({
             {unit.abilities.map((ab, i) => (
               <div key={i} className="px-4 py-3" style={{ background: "var(--wh-surface)" }}>
                 <span className="font-semibold" style={{ color: "var(--wh-accent-gold)" }}>{ab.name}.</span>{" "}
-                <span style={{ color: "var(--wh-text-body)", whiteSpace: "pre-line" }}>{ab.text}</span>
+                <AbilityText text={ab.text} accent={accent} />
               </div>
             ))}
           </div>

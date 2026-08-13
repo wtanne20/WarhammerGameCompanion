@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link2, Copy, Trash2 } from "lucide-react";
 import { factionAccent, unitPoints, compositionOption, currentWounds, maxWounds } from "../lib/catalog.js";
-import { parseWeaponAbilities } from "../lib/weaponAbilities.js";
+import { parseWeaponAbilities, describeWeaponAbility } from "../lib/weaponAbilities.js";
 
 export const STAT_ORDER = ["M", "T", "Sv", "W", "Ld", "OC"];
 export const STAT_LABELS = {
@@ -98,6 +98,45 @@ function WeaponAbilityChips({ kw, accent }) {
         </div>
       )}
     </div>
+  );
+}
+
+// Rule prose (unit abilities, detachment rules, enhancements, stratagems)
+// frequently references a core-rules keyword inline as "[SUSTAINED HITS 1]"
+// — this renders that same bracketed text as a tappable span using the same
+// glossary as WeaponAbilityChips above, so a player doesn't have to already
+// know what it means or go dig through the core rules. Unrecognized
+// brackets (unique flavor-named rules) stay plain, non-interactive text.
+export function AbilityText({ text, accent, className }) {
+  const [openLabel, setOpenLabel] = useState(null);
+  if (!text) return null;
+  const parts = text.split(/(\[[^\]]+\])/g);
+  const openDescription = openLabel ? describeWeaponAbility(openLabel) : null;
+
+  return (
+    <>
+      <span className={className} style={{ color: "var(--wh-text-body)", whiteSpace: "pre-line" }}>
+        {parts.map((part, i) => {
+          const m = part.match(/^\[([^\]]+)\]$/);
+          const label = m && m[1];
+          const description = label && describeWeaponAbility(label);
+          if (!description) return part;
+          const active = openLabel === label;
+          return (
+            <button key={i} onClick={() => setOpenLabel(active ? null : label)}
+              className="font-semibold underline decoration-dotted underline-offset-2"
+              style={{ color: active ? accent : "var(--wh-accent-gold)" }}>
+              {part}
+            </button>
+          );
+        })}
+      </span>
+      {openDescription && (
+        <div className="fs11 mt-2 px-3 py-2" style={{ background: "var(--wh-surface-alt)", color: "var(--wh-text-body)" }}>
+          <span className="font-semibold uppercase" style={{ color: "var(--wh-accent-gold)" }}>{openLabel}</span> — {openDescription}
+        </div>
+      )}
+    </>
   );
 }
 
