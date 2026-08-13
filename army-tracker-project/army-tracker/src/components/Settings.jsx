@@ -89,7 +89,14 @@ function AppUpdateRow({ appUpdate, installingUpdate, onCheckAppUpdate, onInstall
   );
 }
 
-function RulesUpdateRow({ meta, onCheckRulesUpdate }) {
+// Catalog stats/points and rules prose actually come from two different
+// upstream sources (see the "About" section below, and CLAUDE.md) even
+// though sync-data.mjs fetches both together in one run — so both freshness
+// date and "Check now" trigger are always identical between the two
+// instances of this below. Shown as two separate rows anyway, each with its
+// own source credit, so it's obvious both are covered rather than one lumped
+// "rules data" line that doesn't say what it actually includes.
+function RulesUpdateRow({ label, credit, meta, onCheckRulesUpdate }) {
   const [checking, setChecking] = useState(false);
   const [status, setStatus] = useState(null); // "updated" | "current" | "error" | null
   const synced = formatSyncDate(meta);
@@ -107,13 +114,13 @@ function RulesUpdateRow({ meta, onCheckRulesUpdate }) {
 
   return (
     <>
-      <Row label="Warhammer rules data" description={synced ? `Data as of ${synced}` : "Not yet synced"}
+      <Row label={label} description={synced ? `${credit} · as of ${synced}` : `${credit} · not yet synced`}
         right={
           <ActionButton onClick={handleCheck} disabled={checking}>
             {checking ? "Checking…" : "Check now"}
           </ActionButton>
         } />
-      {status === "updated" && <StatusLine tone="good">Rules data updated.</StatusLine>}
+      {status === "updated" && <StatusLine tone="good">Updated.</StatusLine>}
       {status === "current" && <StatusLine>Already up to date.</StatusLine>}
       {status === "error" && <StatusLine tone="bad">Couldn't check for updates — try again later.</StatusLine>}
     </>
@@ -165,7 +172,8 @@ export default function Settings({ meta, onCheckRulesUpdate, appUpdate, installi
       </header>
 
       <SettingsSection title="Updates">
-        <RulesUpdateRow meta={meta} onCheckRulesUpdate={onCheckRulesUpdate} />
+        <RulesUpdateRow label="Game stats & points" credit="40kdc-data" meta={meta} onCheckRulesUpdate={onCheckRulesUpdate} />
+        <RulesUpdateRow label="Rules text" credit="Wahapedia" meta={meta} onCheckRulesUpdate={onCheckRulesUpdate} />
         <AppUpdateRow appUpdate={appUpdate} installingUpdate={installingUpdate}
           onCheckAppUpdate={onCheckAppUpdate} onInstallUpdate={onInstallUpdate} />
       </SettingsSection>
