@@ -40,6 +40,11 @@ const KEY = "game-tracker";
 export const MISSION_SYSTEMS = { ETERNAL_WAR: "eternal-war", FORCE_DISPOSITION: "force-disposition" };
 export const SECONDARY_MODES = { FIXED: "fixed", TACTICAL: "tactical" };
 
+// GameTracker.jsx currently only reads/writes cp, primaryVp, secondaryVp,
+// and notes — the rest (missionSystem, dispositions, secondary
+// selections/tactical hand) belong to the fuller mission-tracking UI that's
+// been temporarily stripped out of the component (not ready for use yet).
+// Kept here so that UI can be reinstated later without a data migration.
 export const DEFAULT_TRACKER = {
   missionSystem: MISSION_SYSTEMS.FORCE_DISPOSITION,
   cp: 1, primaryMissionId: DEFAULT_PRIMARY_MISSION_ID, opponentPrimaryMissionId: null, primaryVp: 0,
@@ -47,6 +52,7 @@ export const DEFAULT_TRACKER = {
   secondaryMode: SECONDARY_MODES.FIXED,
   secondarySelections: [],
   tacticalHand: [], tacticalDiscarded: [],
+  secondaryVp: 0,
   notes: "",
 };
 
