@@ -101,6 +101,21 @@ function fillAbilityParameter(name, text, parameter) {
   return { name: `${name} ${parameter}`, text: text.replace(ABILITY_PARAMETER_PLACEHOLDER, parameter) };
 }
 
+// Those same library abilities' raw description HTML opens with Wahapedia's
+// own page-header markup: the ability name repeated in a <div class="abName">,
+// immediately followed by a rulebook section-reference number with no
+// separating space (e.g. `SCOUTS<span class="h_number">24.31</span>`) —
+// stripHtml only strips tags, not their text content, so that number would
+// otherwise land glued onto the name as junk like "SCOUTS24.31" in the
+// rendered ability text. Both the repeated name and the section number are
+// redundant here (the name is already shown separately via ab.name, and the
+// number means nothing outside the physical rulebook), so the whole header
+// div is dropped before the rest of the markup is stripped.
+const ABILITY_NAME_HEADER = /<div class="abName">[\s\S]*?<\/div>/g;
+function stripAbilityNameHeader(html) {
+  return (html || "").replace(ABILITY_NAME_HEADER, "");
+}
+
 // Detachment/enhancement rule text wraps real game keywords like
 // <span class="kwb">ADEPTUS</span> — a much stronger signal for matching a
 // rule against a unit's own keywords than scanning arbitrary English. Must
@@ -214,7 +229,7 @@ function buildWahapediaCatalog({
           const lib = a.ability_id ? abilityLib.get(a.ability_id) : null;
           const { name, text } = fillAbilityParameter(
             lib ? lib.name : a.name,
-            stripHtml(lib ? lib.description : a.description),
+            stripHtml(stripAbilityNameHeader(lib ? lib.description : a.description)),
             a.parameter
           );
           return { name, text, type: a.type };
