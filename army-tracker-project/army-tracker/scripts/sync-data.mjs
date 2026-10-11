@@ -196,6 +196,33 @@ function normalizeName(s) {
     .trim();
 }
 
+// Wahapedia's Datasheets_models_cost rows aren't just unit sizes: the 11e
+// export interleaves header rows ("YOUR UNIT COSTS", "YOUR 1ST TO 2ND UNITS
+// COST", "YOUR 3RD+ UNIT COSTS", "WARGEAR OPTIONS", all at cost 0), the
+// multi-buy tiers under them, per-weapon wargear costs ("per Lascannon"), and
+// sometimes the same rows twice. Left as-is these all showed up as pickable
+// unit sizes (several at 0pts). Keep only the first-copy sizes (same rule as
+// compositionFor() on the 40kdc side) and return wargear costs separately so
+// they can still be shown as text.
+function parseWahapediaCosts(rows) {
+  const composition = [];
+  const wargearCosts = [];
+  const seen = new Set();
+  let section = "first";
+  for (const c of [...rows].sort(byLine)) {
+    const description = c.description;
+    const points = Number(c.cost) || 0;
+    if (/^YOUR\b/i.test(description)) { section = /^YOUR (UNIT COSTS?|1ST\b)/i.test(description) ? "first" : "skip"; continue; }
+    if (/^WARGEAR OPTIONS/i.test(description)) { section = "wargear"; continue; }
+    const key = `${section}|${description}|${points}`;
+    if (section === "skip" || seen.has(key)) continue;
+    seen.add(key);
+    if (section === "wargear") wargearCosts.push(`Wargear cost: +${points} pts ${description}`);
+    else composition.push({ description, points });
+  }
+  return { composition, wargearCosts };
+}
+
 function buildWahapediaCatalog({
   datasheets, modelsByDs, costByDs, wargearByDs, abilitiesByDs, keywordsByDs,
   compositionByDs, optionsByDs, factionNames, abilityLib, canLeadByDs, canBeLedByDs,
@@ -210,9 +237,7 @@ function buildWahapediaCatalog({
         baseSize: m.base_size || null,
       }));
 
-      const composition = (costByDs.get(d.id) || [])
-        .sort(byLine)
-        .map((c) => ({ description: c.description, points: Number(c.cost) || 0 }));
+      const { composition, wargearCosts } = parseWahapediaCosts(costByDs.get(d.id) || []);
 
       const weapons = (wargearByDs.get(d.id) || [])
         .filter((w) => w.type === "Ranged" || w.type === "Melee")
@@ -246,7 +271,8 @@ function buildWahapediaCatalog({
       const wargearOptions = (optionsByDs.get(d.id) || [])
         .sort(byLine)
         .map((o) => stripHtml(o.description))
-        .filter(Boolean);
+        .filter(Boolean)
+        .concat(wargearCosts);
 
       return {
         id: d.id,
