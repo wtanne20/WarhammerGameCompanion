@@ -230,7 +230,7 @@ function parseWahapediaCosts(rows) {
 }
 
 function buildWahapediaCatalog({
-  factionKeywords, datasheets, modelsByDs, costByDs, wargearByDs, abilitiesByDs, keywordsByDs,
+  factionKeywords, abilityOwnerFaction, datasheets, modelsByDs, costByDs, wargearByDs, abilitiesByDs, keywordsByDs,
   compositionByDs, optionsByDs, factionNames, abilityLib, canLeadByDs, canBeLedByDs,
 }) {
   return datasheets
@@ -261,10 +261,14 @@ function buildWahapediaCatalog({
         // Typhon, Falchion…) to another army's faction rule, e.g. the Space
         // Marines' Combat Doctrines on the Chaos copies. A faction rule that
         // names faction keywords (Combat Doctrines: ADEPTUS ASTARTES) none of
-        // which the unit has doesn't belong to it. Only faction keywords
-        // count — rules also name things like WARLORD that no unit carries.
+        // which the unit has, and that's mostly carried by another faction's
+        // datasheets, doesn't belong to it. Only faction keywords count —
+        // rules also name things like WARLORD that no unit carries — and the
+        // ownership check keeps rules Wahapedia under-keywords on their own
+        // army (e.g. Death Guard characters missing DEATH GUARD).
         .filter((a) => {
-          if (a.type !== "Faction") return true;
+          if (a.type !== "Faction" || !a.ability_id) return true;
+          if (abilityOwnerFaction.get(a.ability_id) === d.faction_id) return true;
           const lib = a.ability_id ? abilityLib.get(a.ability_id) : null;
           const named = extractKeywords(lib ? lib.description : a.description).filter((k) => factionKeywords.has(k));
           return named.length === 0 || named.some((k) => dsKeywordSet.has(k));
@@ -517,8 +521,21 @@ async function main() {
   const factionKeywords = new Set(
     keywords.filter((k) => k.is_faction_keyword === "true").map((k) => (k.keyword || "").toUpperCase())
   );
+  // Which faction's datasheets carry each faction rule most often.
+  const factionByDs = new Map(datasheets.map((d) => [d.id, d.faction_id]));
+  const ownerCounts = new Map();
+  for (const a of abilityLinks) {
+    if (a.type !== "Faction" || !a.ability_id) continue;
+    const counts = ownerCounts.get(a.ability_id) || new Map();
+    const f = factionByDs.get(a.datasheet_id);
+    counts.set(f, (counts.get(f) || 0) + 1);
+    ownerCounts.set(a.ability_id, counts);
+  }
+  const abilityOwnerFaction = new Map(
+    [...ownerCounts].map(([id, counts]) => [id, [...counts].sort((x, y) => y[1] - x[1])[0][0]])
+  );
   const wahapediaCatalog = buildWahapediaCatalog({
-    factionKeywords, datasheets, modelsByDs, costByDs, wargearByDs, abilitiesByDs, keywordsByDs,
+    factionKeywords, abilityOwnerFaction, datasheets, modelsByDs, costByDs, wargearByDs, abilitiesByDs, keywordsByDs,
     compositionByDs, optionsByDs, factionNames, abilityLib, canLeadByDs, canBeLedByDs,
   });
 
