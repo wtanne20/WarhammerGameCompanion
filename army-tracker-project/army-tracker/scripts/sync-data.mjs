@@ -24,7 +24,7 @@
 // https://40kdc.alpacasoft.dev in a user-accessible location — see the
 // footer credit in src/components/ArmyList.jsx.
 
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { Dataset } from "@alpaca-software/40kdc-data";
 
 const BASE = "https://wahapedia.ru/wh40k11ed";
@@ -196,6 +196,33 @@ function normalizeName(s) {
     .trim();
 }
 
+// Wahapedia's Datasheets_models_cost rows aren't just unit sizes: the 11e
+// export interleaves header rows ("YOUR UNIT COSTS", "YOUR 1ST TO 2ND UNITS
+// COST", "YOUR 3RD+ UNIT COSTS", "WARGEAR OPTIONS", all at cost 0), the
+// multi-buy tiers under them, per-weapon wargear costs ("per Lascannon"), and
+// sometimes the same rows twice. Left as-is these all showed up as pickable
+// unit sizes (several at 0pts). Keep only the first-copy sizes (same rule as
+// compositionFor() on the 40kdc side) and return wargear costs separately so
+// they can still be shown as text.
+function parseWahapediaCosts(rows) {
+  const composition = [];
+  const wargearCosts = [];
+  const seen = new Set();
+  let section = "first";
+  for (const c of [...rows].sort(byLine)) {
+    const description = c.description;
+    const points = Number(c.cost) || 0;
+    if (/^YOUR\b/i.test(description)) { section = /^YOUR (UNIT COSTS?|1ST\b)/i.test(description) ? "first" : "skip"; continue; }
+    if (/^WARGEAR OPTIONS/i.test(description)) { section = "wargear"; continue; }
+    const key = `${section}|${description}|${points}`;
+    if (section === "skip" || seen.has(key)) continue;
+    seen.add(key);
+    if (section === "wargear") wargearCosts.push(`Wargear cost: +${points} pts ${description}`);
+    else composition.push({ description, points });
+  }
+  return { composition, wargearCosts };
+}
+
 function buildWahapediaCatalog({
   datasheets, modelsByDs, costByDs, wargearByDs, abilitiesByDs, keywordsByDs,
   compositionByDs, optionsByDs, factionNames, abilityLib, canLeadByDs, canBeLedByDs,
@@ -210,9 +237,7 @@ function buildWahapediaCatalog({
         baseSize: m.base_size || null,
       }));
 
-      const composition = (costByDs.get(d.id) || [])
-        .sort(byLine)
-        .map((c) => ({ description: c.description, points: Number(c.cost) || 0 }));
+      const { composition, wargearCosts } = parseWahapediaCosts(costByDs.get(d.id) || []);
 
       const weapons = (wargearByDs.get(d.id) || [])
         .filter((w) => w.type === "Ranged" || w.type === "Melee")
@@ -246,7 +271,8 @@ function buildWahapediaCatalog({
       const wargearOptions = (optionsByDs.get(d.id) || [])
         .sort(byLine)
         .map((o) => stripHtml(o.description))
-        .filter(Boolean);
+        .filter(Boolean)
+        .concat(wargearCosts);
 
       return {
         id: d.id,
@@ -289,11 +315,29 @@ function formatBaseSize(b) {
 // plain comma-list labels (lowercased; parseWeaponAbilities upper-cases on
 // display) from 40kdc's structured per-profile keyword+parameters, since
 // that's the format src/lib/weaponAbilities.js already parses.
+//
+// 11th-edition codexes (Space Marines first) add target restrictions to
+// otherwise-standard abilities — e.g. a Lethal Hits that only works against
+// Monsters/Vehicles, or one that works against everything *except* them.
+// Those ride along as a ": <keywords>" / ": not <keywords>" suffix (mirroring
+// the printed "[LETHAL HITS: VEHICLE]" style) so the chip doesn't show an
+// unrestricted, stronger version of the ability. An Anti-X restricted to X
+// itself (seen on a few Ork weapons) is redundant and left off.
 function formatWeaponKeywordLabel(keywordView, parameters) {
   const p = parameters || {};
-  if (keywordView.id === "anti") return `anti-${(p.target_keyword || "").toLowerCase()} ${p.threshold}+`;
-  if (p.value != null) return `${keywordView.name.toLowerCase()} ${p.value}`;
-  return keywordView.name.toLowerCase();
+  const kwList = (list) => list.map((k) => k.toLowerCase()).join("/");
+  let label;
+  if (keywordView.id === "anti") label = `anti-${(p.target_keyword || "").toLowerCase()} ${p.threshold}+`;
+  else if (keywordView.id === "hunter") label = `hunter ${(p.target_keyword || "").toLowerCase()}`.trim();
+  else if (p.value != null) label = `${keywordView.name.toLowerCase()} ${p.value}`;
+  else label = keywordView.name.toLowerCase();
+
+  const required = (p.required_target_keywords_any || []).filter(
+    (k) => !(keywordView.id === "anti" && k.toLowerCase() === (p.target_keyword || "").toLowerCase())
+  );
+  if (required.length) label += `: ${kwList(required)}`;
+  if (p.excluded_target_keywords?.length) label += `: not ${kwList(p.excluded_target_keywords)}`;
+  return label;
 }
 
 // 40kdc models a weapon like "Guardian spear" as ONE record with multiple
@@ -349,17 +393,39 @@ function compositionFor(unitView) {
     }));
 }
 
-function build40kdcCatalog(ds, textByName) {
+// When Wahapedia's export is newer than the installed 40kdc-data release,
+// Wahapedia may already carry a points update / balance dataslate that 40kdc
+// hasn't ingested yet (e.g. the 2026-09-30 Munitorum Field Manual v1.5 and
+// dataslate, live on Wahapedia by 2026-10-11 while 40kdc's last release was
+// 2026-09-17). In that case the matching Wahapedia record's numbers win for
+// that unit; ids, role and leader links stay 40kdc's so attachments keep
+// resolving. Matched on name + faction, falling back to name alone only when
+// Wahapedia has a single unit by that name (several factions share names like
+// "Land Raider" at different costs).
+const WAHAPEDIA_NUMERIC_FIELDS = ["models", "compositionText", "composition", "ranged", "melee", "keywords"];
+
+function build40kdcCatalog(ds, wahapediaCatalog, preferWahapediaNumbers) {
+  const byName = groupBy(wahapediaCatalog.map((u) => ({ ...u, key: normalizeName(u.name) })), "key");
+  const findWahapedia = (name, faction) => {
+    const candidates = byName.get(normalizeName(name)) || [];
+    const exact = candidates.find((c) => c.faction === faction) || (candidates.length === 1 ? candidates[0] : null);
+    // Rules text has always matched on name alone (last one wins); keep that
+    // looser match for text so no unit loses its abilities over a faction label.
+    return { exact, loose: exact || candidates[candidates.length - 1] || null };
+  };
   const catalog = [];
+  let numbersFromWahapedia = 0;
   for (const u of ds.units.all) {
     const composition = compositionFor(u);
     if (composition.length === 0) continue; // the couple of units 40kdc hasn't priced yet
     const weapons = weaponRowsFor(u);
-    const enrichment = textByName.get(normalizeName(u.name)) || {};
-    catalog.push({
+    const faction = (u.faction && u.faction.name) || u.raw.faction_id;
+    const { exact: wahapedia, loose } = findWahapedia(u.name, faction);
+    const enrichment = loose || {};
+    const unit = {
       id: u.id,
       name: u.name,
-      faction: (u.faction && u.faction.name) || u.raw.faction_id,
+      faction,
       role: ROLE_MAP[u.raw.role] || "Other",
       legend: enrichment.legend || "",
       models: (u.raw.profiles || []).map((p) => ({
@@ -375,9 +441,30 @@ function build40kdcCatalog(ds, textByName) {
       wargearOptions: enrichment.wargearOptions || [],
       canLead: ds.bodyguardsAttachableFrom(u.id).map((x) => x.id),
       canBeLedBy: ds.leadersAttachableTo(u.id).map((x) => x.id),
-    });
+    };
+    if (preferWahapediaNumbers && wahapedia && wahapedia.models.length && wahapedia.composition.length) {
+      for (const field of WAHAPEDIA_NUMERIC_FIELDS) unit[field] = wahapedia[field];
+      numbersFromWahapedia++;
+    }
+    catalog.push(unit);
   }
-  return catalog;
+  return { catalog, numbersFromWahapedia };
+}
+
+// Publish time of the installed 40kdc-data release, from the npm registry
+// (the dataset itself carries no date). Null if the lookup fails, in which
+// case 40kdc's numbers keep winning as before.
+async function installed40kdcReleaseDate() {
+  try {
+    const pkg = JSON.parse(await readFile(new URL("../node_modules/@alpaca-software/40kdc-data/package.json", import.meta.url), "utf8"));
+    const res = await fetch("https://registry.npmjs.org/@alpaca-software/40kdc-data");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const published = (await res.json()).time?.[pkg.version];
+    return published ? { version: pkg.version, date: new Date(published) } : null;
+  } catch (err) {
+    console.warn(`Couldn't look up the 40kdc-data release date (${err.message}); keeping 40kdc's numbers.`);
+    return null;
+  }
 }
 
 async function main() {
@@ -416,12 +503,13 @@ async function main() {
   console.log("Loading 40kdc-data (stats/points/weapons/keywords/missions)...");
   const ds = Dataset.embedded();
 
-  const textByName = new Map(
-    wahapediaCatalog.map((u) => [normalizeName(u.name), {
-      legend: u.legend, abilities: u.abilities, wargearOptions: u.wargearOptions,
-    }])
-  );
-  const catalog40kdc = build40kdcCatalog(ds, textByName);
+  const kdcRelease = await installed40kdcReleaseDate();
+  const wahapediaUpdated = lastUpdate[0]?.last_update ? new Date(`${lastUpdate[0].last_update.replace(" ", "T")}Z`) : null;
+  const preferWahapediaNumbers = Boolean(kdcRelease && wahapediaUpdated && wahapediaUpdated > kdcRelease.date);
+  console.log(preferWahapediaNumbers
+    ? `Wahapedia (${lastUpdate[0].last_update}) is newer than 40kdc-data ${kdcRelease.version} (${kdcRelease.date.toISOString()}) — using Wahapedia's stats/points/weapons where both have a unit.`
+    : "40kdc-data is current — using its stats/points/weapons.");
+  const { catalog: catalog40kdc, numbersFromWahapedia } = build40kdcCatalog(ds, wahapediaCatalog, preferWahapediaNumbers);
 
   const covered = new Set(catalog40kdc.map((u) => normalizeName(u.name)));
   const fallback = wahapediaCatalog.filter((u) => !covered.has(normalizeName(u.name)));
@@ -429,6 +517,10 @@ async function main() {
 
   const enhancementsByDetachment = groupBy(enhancements, "detachment_id");
   const detachmentRows = groupBy(detachmentAbilities, "detachment_id");
+  // Rows with no detachment_id are orphans (seen after the 11e Space Marines
+  // Codex rework left leftover rows from removed detachments) — grouping them
+  // would surface a nameless, empty detachment in the picker.
+  detachmentRows.delete("");
   const detachments = [...detachmentRows.entries()].map(([detachmentId, rows]) => ({
     id: detachmentId,
     faction: FACTION_FIXES[factionNames.get(rows[0].faction_id)] || factionNames.get(rows[0].faction_id) || rows[0].faction_id,
@@ -478,7 +570,8 @@ async function main() {
   let freshenedEnhancements = 0;
   let freshenedStratagems = 0;
 
-  for (const detachment of detachments) {
+  // Same staleness rule as units: skip this when Wahapedia is the newer source.
+  for (const detachment of preferWahapediaNumbers ? [] : detachments) {
     const kdcDet = kdcDetachmentByName.get(normalizeName(detachment.name));
     if (!kdcDet) continue;
 
@@ -501,7 +594,7 @@ async function main() {
   const kdcCoreStratByName = new Map(
     ds.stratagems.all.filter((s) => !s.detachment_id).map((s) => [normalizeName(s.name), s])
   );
-  for (const s of coreStratagems) {
+  for (const s of preferWahapediaNumbers ? [] : coreStratagems) {
     const match = kdcCoreStratByName.get(normalizeName(s.name));
     if (match && match.cp_cost !== s.cpCost) { s.cpCost = match.cp_cost; freshenedStratagems++; }
   }
@@ -534,13 +627,15 @@ async function main() {
         unitCount: catalog.length,
         unitCount40kdc: catalog40kdc.length,
         unitCountWahapediaFallback: fallback.length,
+        statsSource: preferWahapediaNumbers ? "wahapedia" : "40kdc-data",
+        unitsWithWahapediaNumbers: numbersFromWahapedia,
       },
       null,
       2
     )
   );
 
-  console.log(`Wrote ${catalog.length} units to public/data/catalog.json (${catalog40kdc.length} from 40kdc-data, ${fallback.length} Wahapedia-only fallback)`);
+  console.log(`Wrote ${catalog.length} units to public/data/catalog.json (${catalog40kdc.length} from 40kdc-data, ${numbersFromWahapedia} of those with Wahapedia's newer numbers, ${fallback.length} Wahapedia-only fallback)`);
   console.log(`Wrote ${detachments.length} detachments to public/data/detachments.json (${freshenedEnhancements} enhancement costs freshened from 40kdc-data)`);
   console.log(`Wrote ${coreStratagems.length} core + ${Object.keys(stratagemsByDetachment).length} detachments' stratagems to public/data/stratagems.json (${freshenedStratagems} CP costs freshened from 40kdc-data)`);
   console.log(`Wrote ${dispositionData.dispositions.length} dispositions, ${dispositionData.missions.length} missions, ${dispositionData.cards.length} mission cards to public/data/dispositions.json`);

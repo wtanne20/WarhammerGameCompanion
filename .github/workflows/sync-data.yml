@@ -24,6 +24,16 @@ jobs:
           cache-dependency-path: army-tracker-project/army-tracker/package-lock.json
       - working-directory: army-tracker-project/army-tracker
         run: npm ci
+      # The stats/points side comes from the @alpaca-software/40kdc-data npm
+      # package, which `npm ci` alone pins at whatever version the lockfile
+      # records, so new points/datasheet releases there would never reach
+      # the app. Pull the newest release allowed by package.json's range
+      # each run (a new major may change the API sync-data.mjs relies on, so
+      # that stays a deliberate manual bump). Only public/data is committed
+      # below, so the lockfile edit this makes is discarded and never
+      # triggers an APK release (release-android.yml watches those files).
+      - working-directory: army-tracker-project/army-tracker
+        run: npm update @alpaca-software/40kdc-data
       - working-directory: army-tracker-project/army-tracker
         run: npm run sync-data
       - working-directory: army-tracker-project/army-tracker
