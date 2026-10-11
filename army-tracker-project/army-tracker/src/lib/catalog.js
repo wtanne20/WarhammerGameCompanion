@@ -208,10 +208,22 @@ export function defaultWeaponSelection(unit) {
 // Which of the datasheet's weapon profiles this particular unit instance is
 // actually equipped with: the player's own choice (unit.weaponSelection,
 // edited from the datasheet's loadout mode), or the default loadout above.
+//
+// A saved selection names profiles as they were when it was made, and a
+// data sync can rename them ("Flamestorm Gauntlets" becoming "Flamestorm
+// Gauntlets - Ranged" / "- Close Quarters"), so names are matched on their
+// base weapon too. If a saved selection no longer matches anything the
+// unit has, it's stale and the default loadout is used instead.
 export function selectedWeapons(unit) {
-  const sel = unit.weaponSelection || defaultWeaponSelection(unit);
-  return {
-    ranged: unit.ranged.filter((w) => sel.ranged.includes(w.name)),
-    melee: unit.melee.filter((w) => sel.melee.includes(w.name)),
+  const pick = (sel) => {
+    const current = new Set([...unit.ranged, ...unit.melee].map((w) => w.name));
+    const keys = new Set([...sel.ranged, ...sel.melee].filter((n) => !current.has(n)).map(weaponKey));
+    const has = (w) => sel.ranged.includes(w.name) || sel.melee.includes(w.name) || keys.has(weaponKey(w.name));
+    return { ranged: unit.ranged.filter(has), melee: unit.melee.filter(has) };
   };
+  if (unit.weaponSelection) {
+    const chosen = pick(unit.weaponSelection);
+    if (chosen.ranged.length + chosen.melee.length > 0) return chosen;
+  }
+  return pick(defaultWeaponSelection(unit));
 }

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Loader2, Shield, X } from "lucide-react";
 import { uid } from "./lib/id.js";
-import { fetchCatalog, armyPoints, refreshUnits, defaultWeaponSelection } from "./lib/catalog.js";
+import { fetchCatalog, armyPoints, refreshUnits, selectedWeapons } from "./lib/catalog.js";
 import {
   loadArmyIndex, createArmy, deleteArmy, loadArmy, saveArmy,
   setUnitPhoto, deleteUnitPhoto, getActiveArmyId, setActiveArmyId, refreshAllArmies,
@@ -403,7 +403,8 @@ export default function App() {
       ...a,
       units: a.units.map((u) => {
         if (u.instId !== instId) return u;
-        const current = u.weaponSelection || defaultWeaponSelection(u);
+        const shown = selectedWeapons(u);
+        const current = { ranged: shown.ranged.map((w) => w.name), melee: shown.melee.map((w) => w.name) };
         const list = current[category];
         const nextList = list.includes(name) ? list.filter((n) => n !== name) : [...list, name];
         return { ...u, weaponSelection: { ...current, [category]: nextList } };
