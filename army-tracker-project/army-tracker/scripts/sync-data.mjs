@@ -255,14 +255,18 @@ function buildWahapediaCatalog({
           ranged: w.type === "Ranged",
         }));
 
+      const dsKeywordSet = new Set((keywordsByDs.get(d.id) || []).map((k) => (k.keyword || "").toUpperCase()));
       const dsAbilities = (abilitiesByDs.get(d.id) || [])
         // Wahapedia links some shared Forge World datasheets (Cerberus,
         // Typhon, Falchion…) to another army's faction rule, e.g. the Space
-        // Marines' Combat Doctrines showing up on the Chaos copies. Faction
-        // rules carry their own faction in Abilities.csv; drop mismatches.
+        // Marines' Combat Doctrines on the Chaos copies. A faction rule that
+        // names keywords (Combat Doctrines: ADEPTUS ASTARTES) none of which
+        // the unit has doesn't belong to it.
         .filter((a) => {
+          if (a.type !== "Faction") return true;
           const lib = a.ability_id ? abilityLib.get(a.ability_id) : null;
-          return !(a.type === "Faction" && lib?.faction_id && d.faction_id && lib.faction_id !== d.faction_id);
+          const named = extractKeywords(lib ? lib.description : a.description);
+          return named.length === 0 || named.some((k) => dsKeywordSet.has(k));
         })
         .map((a) => {
           const lib = a.ability_id ? abilityLib.get(a.ability_id) : null;
@@ -275,7 +279,7 @@ function buildWahapediaCatalog({
         })
         .filter((a) => a.name);
 
-      const dsKeywords = (keywordsByDs.get(d.id) || []).map((k) => k.keyword).filter(Boolean);
+      const dsKeywords = [...new Set((keywordsByDs.get(d.id) || []).map((k) => k.keyword).filter(Boolean))];
 
       const compositionText = (compositionByDs.get(d.id) || [])
         .sort(byLine)
