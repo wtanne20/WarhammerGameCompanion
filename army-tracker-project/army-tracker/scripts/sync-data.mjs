@@ -447,6 +447,10 @@ async function main() {
 
   const enhancementsByDetachment = groupBy(enhancements, "detachment_id");
   const detachmentRows = groupBy(detachmentAbilities, "detachment_id");
+  // Rows with no detachment_id are orphans (seen after the 11e Space Marines
+  // Codex rework left leftover rows from removed detachments) — grouping them
+  // would surface a nameless, empty detachment in the picker.
+  detachmentRows.delete("");
   const detachments = [...detachmentRows.entries()].map(([detachmentId, rows]) => ({
     id: detachmentId,
     faction: FACTION_FIXES[factionNames.get(rows[0].faction_id)] || factionNames.get(rows[0].faction_id) || rows[0].faction_id,
