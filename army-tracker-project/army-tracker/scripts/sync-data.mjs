@@ -80,6 +80,12 @@ function stripHtml(input) {
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    // Sub-headings inside rule text (e.g. the Space Marines Combat
+    // Doctrines' "ASSAULT DOCTRINE" / "DEVASTATOR DOCTRINE") are inline
+    // markup with no separator, so they'd land glued to the next sentence
+    // ("ASSAULT DOCTRINEWhen…"). Two or more all-caps words fused onto a
+    // capitalized word get a line break instead.
+    .replace(/\b([A-Z][A-Z’']+(?: [A-Z][A-Z’']+)+)(?=[A-Z][a-z])/g, "$1\n")
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
@@ -250,6 +256,14 @@ function buildWahapediaCatalog({
         }));
 
       const dsAbilities = (abilitiesByDs.get(d.id) || [])
+        // Wahapedia links some shared Forge World datasheets (Cerberus,
+        // Typhon, Falchion…) to another army's faction rule, e.g. the Space
+        // Marines' Combat Doctrines showing up on the Chaos copies. Faction
+        // rules carry their own faction in Abilities.csv; drop mismatches.
+        .filter((a) => {
+          const lib = a.ability_id ? abilityLib.get(a.ability_id) : null;
+          return !(a.type === "Faction" && lib?.faction_id && d.faction_id && lib.faction_id !== d.faction_id);
+        })
         .map((a) => {
           const lib = a.ability_id ? abilityLib.get(a.ability_id) : null;
           const { name, text } = fillAbilityParameter(
