@@ -1,11 +1,11 @@
 import { useRef, useState } from "react";
-import { ChevronLeft, Trash2, Shield, Swords, Loader2, Camera } from "lucide-react";
+import { ChevronLeft, Trash2, Shield, Swords, Loader2, Camera, Check, SlidersHorizontal } from "lucide-react";
 import { factionAccent, unitPoints, currentWounds, maxWounds, compositionOption, selectedWeapons } from "../lib/catalog.js";
+import { showRule, coreAbilityRule, lookupRule } from "../lib/rules.js";
 import { compressImage } from "../lib/image.js";
 import { useCloseOnBack } from "../lib/useCloseOnBack.js";
-import { Placeholder, SectionLabel, WeaponTable, ProfileStats, Counter, AbilityText } from "./shared.jsx";
+import { Placeholder, SectionLabel, WeaponTable, ProfileStats, Counter, AbilityText, RuleTerm } from "./shared.jsx";
 import EffectsPanel from "./EffectsPanel.jsx";
-import WeaponSelector from "./WeaponSelector.jsx";
 import PhotoSourceSheet from "./PhotoSourceSheet.jsx";
 import ImageSearch from "./ImageSearch.jsx";
 import PasteImageUrlSheet from "./PasteImageUrlSheet.jsx";
@@ -15,23 +15,20 @@ import PasteImageUrlSheet from "./PasteImageUrlSheet.jsx";
 // collapsed to tap-to-read chips; the unit's own abilities stay in full.
 const SHARED_ABILITY_TYPES = { Core: "Core", Faction: "Army rules" };
 
-function SharedAbilityChips({ label, abilities, accent }) {
-  const [open, setOpen] = useState(null);
+function SharedAbilityChips({ label, abilities }) {
   if (abilities.length === 0) return null;
-  const active = abilities.find((a) => a.name === open);
   return (
     <div className="px-4 py-3" style={{ background: "var(--wh-surface)" }}>
-      <div className="fs10 uppercase tracking-widest mb-2" style={{ color: "var(--wh-muted)" }}>{label}</div>
+      <div className="fs11 uppercase tracking-widest mb-2" style={{ color: "var(--wh-muted)" }}>{label} · tap to read</div>
       <div className="flex flex-wrap gap-1.5">
         {abilities.map((a) => (
-          <button key={a.name} onClick={() => setOpen(open === a.name ? null : a.name)}
-            className="fs11 uppercase tracking-wider px-2 py-1 active:opacity-70"
-            style={{ background: open === a.name ? accent : "var(--wh-surface-alt)", color: "var(--wh-text)" }}>
+          <button key={a.name} onClick={() => showRule({ title: a.name, text: (a.type === "Core" && coreAbilityRule(a.name)?.text) || a.text })}
+            className="fs12 uppercase tracking-wider px-2.5 py-1.5 active:opacity-70"
+            style={{ background: "var(--wh-surface-alt)", color: "var(--wh-text)", borderBottom: "1px dotted var(--wh-accent-gold)" }}>
             {a.name}
           </button>
         ))}
       </div>
-      {active && <div className="text-sm mt-3"><AbilityText text={active.text} accent={accent} /></div>}
     </div>
   );
 }
@@ -56,6 +53,9 @@ export default function Datasheet({
   const wMax = maxWounds(unit);
   const selectedComposition = compositionOption(unit);
   const weapons = selectedWeapons(unit);
+  const [editingLoadout, setEditingLoadout] = useState(false);
+  const hiddenCount = unit.ranged.length + unit.melee.length - weapons.ranged.length - weapons.melee.length;
+  const carried = (list) => (name) => list.some((w) => w.name === name);
 
   useCloseOnBack(!!photoFlow, () => setPhotoFlow(null));
 
@@ -156,10 +156,37 @@ export default function Datasheet({
       </div>
 
       {editing && composition}
-      {editing && <WeaponSelector unit={unit} onToggle={(category, name) => onToggleWeapon(unit.instId, category, name)} />}
 
-      <WeaponTable title="Ranged weapons" icon={<Swords size={13} />} weapons={weapons.ranged} ranged accent={accent} />
-      <WeaponTable title="Melee weapons" icon={<Swords size={13} />} weapons={weapons.melee} accent={accent} />
+      {editingLoadout && unit.wargearOptions && unit.wargearOptions.length > 0 && (
+        <div className="px-3 pt-5">
+          <div className="px-4 py-3" style={{ background: "var(--wh-surface)" }}>
+            <div className="fs11 uppercase tracking-widest mb-1" style={{ color: "var(--wh-muted)" }}>Wargear options</div>
+            {unit.wargearOptions.map((opt, i) => (
+              <p key={i} className="text-sm mt-1" style={{ color: "var(--wh-text-body)", whiteSpace: "pre-line" }}>{opt}</p>
+            ))}
+          </div>
+        </div>
+      )}
+      <WeaponTable title="Ranged weapons" icon={<Swords size={13} />} ranged accent={accent}
+        weapons={editingLoadout ? unit.ranged : weapons.ranged}
+        isCarried={carried(weapons.ranged)} onToggle={editingLoadout ? (name) => onToggleWeapon(unit.instId, "ranged", name) : null} />
+      <WeaponTable title="Melee weapons" icon={<Swords size={13} />} accent={accent}
+        weapons={editingLoadout ? unit.melee : weapons.melee}
+        isCarried={carried(weapons.melee)} onToggle={editingLoadout ? (name) => onToggleWeapon(unit.instId, "melee", name) : null} />
+      {(hiddenCount > 0 || editingLoadout) && (
+        <div className="px-3 pt-1">
+          <button onClick={() => setEditingLoadout((v) => !v)}
+            className="w-full flex items-center justify-between px-4 py-3 active:opacity-80"
+            style={{ background: editingLoadout ? accent : "var(--wh-surface)", color: "var(--wh-text)" }}>
+            <span className="fs12 uppercase tracking-widest" style={{ color: editingLoadout ? "var(--wh-text)" : "var(--wh-muted)" }}>
+              {editingLoadout ? "Done choosing weapons" : `${hiddenCount} option${hiddenCount === 1 ? "" : "s"} hidden`}
+            </span>
+            <span className="flex items-center gap-1.5 fs12 uppercase tracking-widest whitespace-nowrap">
+              {editingLoadout ? <Check size={15} /> : <><SlidersHorizontal size={14} /> Change loadout</>}
+            </span>
+          </button>
+        </div>
+      )}
 
       {abilities.length > 0 && (
         <section className="px-3 pt-5">
@@ -168,11 +195,11 @@ export default function Datasheet({
             {ownAbilities.map((ab, i) => (
               <div key={i} className="px-4 py-3" style={{ background: "var(--wh-surface)" }}>
                 <div className="font-semibold" style={{ color: "var(--wh-accent-gold)" }}>{ab.name}</div>
-                <div className="text-sm mt-1"><AbilityText text={ab.text} accent={accent} /></div>
+                <div className="text-sm mt-1 leading-relaxed"><AbilityText text={ab.text} /></div>
               </div>
             ))}
             {Object.entries(SHARED_ABILITY_TYPES).map(([type, label]) => (
-              <SharedAbilityChips key={type} label={label} accent={accent} abilities={abilities.filter((a) => a.type === type)} />
+              <SharedAbilityChips key={type} label={label} abilities={abilities.filter((a) => a.type === type)} />
             ))}
           </div>
         </section>
@@ -187,7 +214,10 @@ export default function Datasheet({
       <section className="px-3 pt-5">
         <SectionLabel accent={accent}>Keywords</SectionLabel>
         <div className="flex flex-wrap gap-1.5 mt-2">
-          {unit.keywords.map((k) => (<span key={k} className="fs10 uppercase tracking-widest px-2 py-1" style={{ background: "var(--wh-surface)", color: "var(--wh-muted)" }}>{k}</span>))}
+          {unit.keywords.map((k) => (
+            <RuleTerm key={k} term={k} className="fs11 uppercase tracking-widest px-2 py-1"
+              style={{ background: "var(--wh-surface)", color: lookupRule(k) ? "var(--wh-text)" : "var(--wh-muted)" }} />
+          ))}
         </div>
       </section>
 

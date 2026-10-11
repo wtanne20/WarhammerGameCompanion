@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Loader2, Shield, X } from "lucide-react";
 import { uid } from "./lib/id.js";
-import { fetchCatalog, armyPoints, refreshUnits } from "./lib/catalog.js";
+import { fetchCatalog, armyPoints, refreshUnits, defaultWeaponSelection } from "./lib/catalog.js";
 import {
   loadArmyIndex, createArmy, deleteArmy, loadArmy, saveArmy,
   setUnitPhoto, deleteUnitPhoto, getActiveArmyId, setActiveArmyId, refreshAllArmies,
@@ -28,7 +28,9 @@ import ImportArmySheet from "./components/ImportArmySheet.jsx";
 import FactionPicker from "./components/FactionPicker.jsx";
 import DetachmentPicker from "./components/DetachmentPicker.jsx";
 import IconPicker from "./components/IconPicker.jsx";
-import GameTracker from "./components/GameTracker.jsx";
+import RulesPage from "./components/RulesPage.jsx";
+import { RuleSheet } from "./components/shared.jsx";
+import { indexCatalogRules } from "./lib/rules.js";
 import MyUnits from "./components/MyUnits.jsx";
 import Settings from "./components/Settings.jsx";
 
@@ -37,7 +39,7 @@ const fontCss = `
   .font-display { font-family: 'Oswald', sans-serif; }
   .font-body { font-family: 'IBM Plex Sans', sans-serif; }
   .tnum { font-variant-numeric: tabular-nums; }
-  .fs9 { font-size: 9px; } .fs10 { font-size: 10px; } .fs11 { font-size: 11px; } .fs15 { font-size: 15px; }
+  .fs9 { font-size: 9px; } .fs10 { font-size: 10px; } .fs11 { font-size: 11px; } .fs12 { font-size: 12px; } .fs15 { font-size: 15px; }
   * { -webkit-tap-highlight-color: transparent; }
   input, textarea { font-family: inherit; }
 `;
@@ -51,6 +53,9 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [catalogError, setCatalogError] = useState(null);
   const [catalog, setCatalog] = useState([]);
+  // Core-ability rules text comes from the catalog itself (see lib/rules.js);
+  // re-indexed synchronously so the render that follows can already link it.
+  useMemo(() => indexCatalogRules(catalog), [catalog]);
   const [meta, setMeta] = useState(null);
   const [armies, setArmies] = useState([]);
   const [tab, setTab] = useState("armies");
@@ -398,7 +403,7 @@ export default function App() {
       ...a,
       units: a.units.map((u) => {
         if (u.instId !== instId) return u;
-        const current = u.weaponSelection || { ranged: u.ranged.map((w) => w.name), melee: u.melee.map((w) => w.name) };
+        const current = u.weaponSelection || defaultWeaponSelection(u);
         const list = current[category];
         const nextList = list.includes(name) ? list.filter((n) => n !== name) : [...list, name];
         return { ...u, weaponSelection: { ...current, [category]: nextList } };
@@ -532,7 +537,7 @@ export default function App() {
             )
           )}
 
-          {tab === "tracker" && <GameTracker />}
+          {tab === "rules" && <RulesPage />}
 
           {tab === "settings" && (
             <Settings meta={meta} onCheckRulesUpdate={handleCheckRulesUpdate}
@@ -557,6 +562,7 @@ export default function App() {
       )}
       <ConfirmDialog open={!!confirmDialog} message={confirmDialog?.message} confirmLabel={confirmDialog?.confirmLabel}
         danger={confirmDialog?.danger} onConfirm={() => confirmDialog?.onConfirm()} onCancel={() => setConfirmDialog(null)} />
+      <RuleSheet />
     </div>
   );
 }

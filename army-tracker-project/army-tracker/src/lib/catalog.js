@@ -120,16 +120,48 @@ export function refreshUnits(units, catalog) {
   });
 }
 
+// A datasheet's starting loadout, read off its wargear-option text.
+// Wahapedia lists every profile a datasheet can take (defaults and swap-in
+// options together) with no structured link between them, but the option
+// text follows a fixed pattern: "X can be replaced with [bullets]" / "can
+// be equipped with Y". Weapons that only ever appear on the "replaced
+// with"/"equipped with" side are options; everything else is default kit.
+// Units with no option text (or where that would hide everything) keep all
+// their profiles.
+const weaponKey = (s) => s.toLowerCase().replace(/[’']/g, "").replace(/\s+[-–]\s+.*$/, "")
+  .replace(/[^a-z0-9]+/g, " ").trim().replace(/s\b/g, "");
+const looseText = (s) => ` ${s.toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, " ").replace(/s\b/g, "")} `;
+
+export function defaultWeaponSelection(unit) {
+  const all = [...unit.ranged, ...unit.melee];
+  const optional = new Set();
+  const named = new Set();
+  for (const option of unit.wargearOptions || []) {
+    for (const line of option.split("\n")) {
+      const bullet = /^\s*[•-]/.test(line);
+      const cut = line.search(/\b(replaced with|equipped with)\b/i);
+      const before = bullet ? "" : cut < 0 ? line : line.slice(0, cut);
+      const after = bullet ? line : cut < 0 ? "" : line.slice(cut);
+      for (const w of all) {
+        const key = weaponKey(w.name);
+        if (!key) continue;
+        if (before && looseText(before).includes(` ${key} `)) named.add(key);
+        if (after && looseText(after).includes(` ${key} `)) optional.add(key);
+      }
+    }
+  }
+  const keep = (w) => { const k = weaponKey(w.name); return !optional.has(k) || named.has(k); };
+  if (!all.some(keep)) return { ranged: unit.ranged.map((w) => w.name), melee: unit.melee.map((w) => w.name) };
+  return { ranged: unit.ranged.filter(keep).map((w) => w.name), melee: unit.melee.filter(keep).map((w) => w.name) };
+}
+
 // Which of the datasheet's weapon profiles this particular unit instance is
-// actually equipped with. Wahapedia lists every profile a datasheet can take
-// (defaults and swap-in options together) with no structured link back to
-// which wargear-option text enables which profile, so unit.weaponSelection
-// is the player's own manual choice — undefined means "everything" (the
-// unfiltered default, same as before this existed).
+// actually equipped with: the player's own choice (unit.weaponSelection,
+// edited from the datasheet's loadout mode), or the default loadout above.
 export function selectedWeapons(unit) {
-  const sel = unit.weaponSelection;
+  const sel = unit.weaponSelection || defaultWeaponSelection(unit);
   return {
-    ranged: sel ? unit.ranged.filter((w) => sel.ranged.includes(w.name)) : unit.ranged,
-    melee: sel ? unit.melee.filter((w) => sel.melee.includes(w.name)) : unit.melee,
+    ranged: unit.ranged.filter((w) => sel.ranged.includes(w.name)),
+    melee: unit.melee.filter((w) => sel.melee.includes(w.name)),
   };
 }
