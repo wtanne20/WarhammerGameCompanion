@@ -40,7 +40,13 @@ jobs:
           distribution: temurin
           java-version: "21"
 
+      # setup-android's default package list still includes the legacy
+      # "tools" package, which current cmdline-tools no longer ship, so
+      # sdkmanager fails before the build starts. Ask only for what the
+      # build needs (compileSdkVersion in android/variables.gradle).
       - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-36"
 
       - run: npm ci
       - run: npm run cap:build
