@@ -1,10 +1,10 @@
 import { useRef, useState } from "react";
 import { ChevronLeft, Trash2, Shield, Swords, Loader2, Camera, Check, SlidersHorizontal } from "lucide-react";
-import { factionAccent, unitPoints, currentWounds, maxWounds, compositionOption, selectedWeapons } from "../lib/catalog.js";
+import { factionAccent, unitPoints, compositionOption, selectedWeapons } from "../lib/catalog.js";
 import { showRule, coreAbilityRule, lookupRule } from "../lib/rules.js";
 import { compressImage } from "../lib/image.js";
 import { useCloseOnBack } from "../lib/useCloseOnBack.js";
-import { Placeholder, SectionLabel, WeaponTable, ProfileStats, Counter, AbilityText, RuleTerm } from "./shared.jsx";
+import { Placeholder, SectionLabel, WeaponTable, ProfileStats, WoundTracker, AbilityText, RuleTerm } from "./shared.jsx";
 import EffectsPanel from "./EffectsPanel.jsx";
 import PhotoSourceSheet from "./PhotoSourceSheet.jsx";
 import ImageSearch from "./ImageSearch.jsx";
@@ -49,8 +49,6 @@ export default function Datasheet({
   const [photoFlow, setPhotoFlow] = useState(null);
   const abilities = unit.abilities || [];
   const ownAbilities = abilities.filter((a) => !SHARED_ABILITY_TYPES[a.type]);
-  const wounds = currentWounds(unit);
-  const wMax = maxWounds(unit);
   const selectedComposition = compositionOption(unit);
   const weapons = selectedWeapons(unit);
   const [editingLoadout, setEditingLoadout] = useState(false);
@@ -151,8 +149,7 @@ export default function Datasheet({
       </div>
 
       <div className="px-3 pt-4">
-        <Counter label="Wounds remaining" value={wounds} max={wMax} suffix={` / ${wMax}`}
-          onChange={(n) => onWounds(unit.instId, n)} />
+        <WoundTracker unit={unit} onChange={(n) => onWounds(unit.instId, n)} />
       </div>
 
       {editing && composition}

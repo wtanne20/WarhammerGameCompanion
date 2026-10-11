@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
 import { Link2, Copy, Trash2, X } from "lucide-react";
-import { factionAccent, unitPoints, compositionOption, currentWounds, maxWounds } from "../lib/catalog.js";
+import { factionAccent, unitPoints, compositionOption, currentWounds, maxWounds, modelWounds } from "../lib/catalog.js";
 import { parseWeaponAbilities } from "../lib/weaponAbilities.js";
 import { showRule, onShowRule, lookupRule, tokenizeRulesText, STAT_RULES } from "../lib/rules.js";
 import { useCloseOnBack } from "../lib/useCloseOnBack.js";
@@ -40,6 +40,61 @@ export function Counter({ label, value, onChange, min = 0, max = Infinity, suffi
         <button onClick={() => onChange(Math.max(min, value - 1))} className="font-display text-xl w-9 h-9 flex items-center justify-center" style={{ background: "var(--wh-surface-alt)", color: "var(--wh-text)" }}>–</button>
         <span className="font-display text-2xl tnum text-center" style={{ minWidth: 40 }}>{value}{suffix || ""}</span>
         <button onClick={() => onChange(Math.min(max, value + 1))} className="font-display text-xl w-9 h-9 flex items-center justify-center" style={{ background: "var(--wh-surface-alt)", color: "var(--wh-text)" }}>+</button>
+      </div>
+    </div>
+  );
+}
+
+// Wounds for the whole unit as one number you nudge with − / +, with the
+// models drawn underneath so you can see what that total means on the
+// table: damage fills one model at a time, so "7 damage on three 3-wound
+// models" reads as two models gone and one on 2 wounds.
+export function WoundTracker({ unit, onChange }) {
+  const total = currentWounds(unit);
+  const max = maxWounds(unit);
+  const models = modelWounds(unit);
+  const alive = models.filter((m) => m.remaining > 0).length;
+  const step = (d) => onChange(Math.max(0, Math.min(max, total + d)));
+  const btn = "font-display text-2xl w-12 h-12 flex items-center justify-center active:opacity-70";
+  return (
+    <div className="px-4 py-3" style={{ background: "var(--wh-surface)" }}>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Wounds</div>
+          {models.length > 1 && (
+            <div className="fs12 mt-0.5 tnum" style={{ color: alive < models.length ? "#D98C4A" : "var(--wh-text-body)" }}>
+              {alive} of {models.length} models left
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <button onClick={() => step(-1)} className={btn} style={{ background: "var(--wh-surface-alt)", color: "var(--wh-text)" }}>–</button>
+          <span className="font-display text-3xl tnum text-center leading-none" style={{ minWidth: 72, color: total < max ? "#D98C4A" : "var(--wh-text)" }}>
+            {total}<span className="text-lg" style={{ color: "var(--wh-muted)" }}> / {max}</span>
+          </span>
+          <button onClick={() => step(1)} className={btn} style={{ background: "var(--wh-surface-alt)", color: "var(--wh-text)" }}>+</button>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-1.5 mt-3">
+        {models.map((m, i) => {
+          const dead = m.remaining === 0;
+          const hurt = !dead && m.remaining < m.W;
+          return (
+            <div key={i} className="px-1.5 py-1 flex flex-col items-center" title={m.name}
+              style={{ background: "var(--wh-surface-alt)", opacity: dead ? 0.35 : 1, outline: hurt ? "1px solid #D98C4A" : "none", minWidth: 34 }}>
+              {m.W <= 6 ? (
+                <div className="flex gap-0.5">
+                  {Array.from({ length: m.W }, (_, j) => (
+                    <span key={j} style={{ width: 6, height: 12, background: j < m.remaining ? (hurt ? "#D98C4A" : "var(--wh-accent-gold)") : "var(--wh-border)" }} />
+                  ))}
+                </div>
+              ) : (
+                <div className="fs12 font-semibold tnum leading-none py-0.5" style={{ color: hurt ? "#D98C4A" : "var(--wh-text)" }}>{m.remaining}/{m.W}</div>
+              )}
+              <span className="fs9 uppercase mt-0.5 leading-none" style={{ color: "var(--wh-muted)" }}>{dead ? "✕" : `${m.remaining}W`}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
