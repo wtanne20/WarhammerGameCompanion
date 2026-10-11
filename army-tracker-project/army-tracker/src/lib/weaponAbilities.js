@@ -11,9 +11,11 @@
 // Note: as of this edition, Wahapedia's live datasheet/wargear export still
 // uses 10th-edition-era terminology throughout (e.g. every weapon that will
 // eventually read [CLOSE-QUARTERS] still reads [PISTOL] today, and
-// [CLEAVE]/keyword-restricted abilities like "[LETHAL HITS: VEHICLE]" don't
-// appear at all yet) — those entries are included below for when the data
-// catches up, but won't show as chips on any current unit.
+// [CLEAVE] doesn't appear at all yet). The 40kdc-data stats side has started
+// carrying 11th-edition codex profiles (Space Marines first), so [CLEAVE] and
+// keyword-restricted abilities like "[LETHAL HITS: VEHICLE]" now do show up
+// on those units. [HUNTER] also appears there, but its core-rules text wasn't
+// available to verify, so it's left as a plain chip for now.
 const GLOSSARY = {
   ASSAULT: "Lets a unit that made an Advance move this turn still shoot — but only with its Assault weapons.",
   BLAST: (v) =>
@@ -61,7 +63,22 @@ function splitValue(label) {
   return { base: label.trim(), value: null };
 }
 
+// Keyword-restricted abilities ("lethal hits: vehicle", "sustained hits 2:
+// not monster/vehicle" — see formatWeaponKeywordLabel in
+// scripts/sync-data.mjs) are described as the plain ability plus a sentence
+// saying which targets it applies to.
 export function describeWeaponAbility(label) {
+  const colon = label.indexOf(":");
+  if (colon !== -1) {
+    const base = describeWeaponAbility(label.slice(0, colon).trim());
+    if (!base) return null;
+    const qualifier = label.slice(colon + 1).trim();
+    const excluded = /^not\s+/i.test(qualifier);
+    const targets = qualifier.replace(/^not\s+/i, "").split("/").map(titleCase).join(" or ");
+    return excluded
+      ? `${base} Doesn't apply against ${targets} targets.`
+      : `${base} Only applies against ${targets} targets.`;
+  }
   const { base, value } = splitValue(label);
   const upperBase = base.toUpperCase();
   if (upperBase.startsWith("ANTI-")) {

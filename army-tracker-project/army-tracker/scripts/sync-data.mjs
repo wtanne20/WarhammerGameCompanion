@@ -289,11 +289,29 @@ function formatBaseSize(b) {
 // plain comma-list labels (lowercased; parseWeaponAbilities upper-cases on
 // display) from 40kdc's structured per-profile keyword+parameters, since
 // that's the format src/lib/weaponAbilities.js already parses.
+//
+// 11th-edition codexes (Space Marines first) add target restrictions to
+// otherwise-standard abilities — e.g. a Lethal Hits that only works against
+// Monsters/Vehicles, or one that works against everything *except* them.
+// Those ride along as a ": <keywords>" / ": not <keywords>" suffix (mirroring
+// the printed "[LETHAL HITS: VEHICLE]" style) so the chip doesn't show an
+// unrestricted, stronger version of the ability. An Anti-X restricted to X
+// itself (seen on a few Ork weapons) is redundant and left off.
 function formatWeaponKeywordLabel(keywordView, parameters) {
   const p = parameters || {};
-  if (keywordView.id === "anti") return `anti-${(p.target_keyword || "").toLowerCase()} ${p.threshold}+`;
-  if (p.value != null) return `${keywordView.name.toLowerCase()} ${p.value}`;
-  return keywordView.name.toLowerCase();
+  const kwList = (list) => list.map((k) => k.toLowerCase()).join("/");
+  let label;
+  if (keywordView.id === "anti") label = `anti-${(p.target_keyword || "").toLowerCase()} ${p.threshold}+`;
+  else if (keywordView.id === "hunter") label = `hunter ${(p.target_keyword || "").toLowerCase()}`.trim();
+  else if (p.value != null) label = `${keywordView.name.toLowerCase()} ${p.value}`;
+  else label = keywordView.name.toLowerCase();
+
+  const required = (p.required_target_keywords_any || []).filter(
+    (k) => !(keywordView.id === "anti" && k.toLowerCase() === (p.target_keyword || "").toLowerCase())
+  );
+  if (required.length) label += `: ${kwList(required)}`;
+  if (p.excluded_target_keywords?.length) label += `: not ${kwList(p.excluded_target_keywords)}`;
+  return label;
 }
 
 // 40kdc models a weapon like "Guardian spear" as ONE record with multiple
