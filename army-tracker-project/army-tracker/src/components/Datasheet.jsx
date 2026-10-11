@@ -3,12 +3,38 @@ import { ChevronLeft, Trash2, Shield, Swords, Loader2, Camera } from "lucide-rea
 import { factionAccent, unitPoints, currentWounds, maxWounds, compositionOption, selectedWeapons } from "../lib/catalog.js";
 import { compressImage } from "../lib/image.js";
 import { useCloseOnBack } from "../lib/useCloseOnBack.js";
-import { Placeholder, SectionLabel, WeaponTable, StatBlock, Counter, AbilityText, STAT_ORDER, STAT_LABELS } from "./shared.jsx";
+import { Placeholder, SectionLabel, WeaponTable, ProfileStats, Counter, AbilityText } from "./shared.jsx";
 import EffectsPanel from "./EffectsPanel.jsx";
 import WeaponSelector from "./WeaponSelector.jsx";
 import PhotoSourceSheet from "./PhotoSourceSheet.jsx";
 import ImageSearch from "./ImageSearch.jsx";
 import PasteImageUrlSheet from "./PasteImageUrlSheet.jsx";
+
+// Core rules (Deep Strike, Leader…) and army rules (Oath of Moment, Combat
+// Doctrines…) repeat on every datasheet of an army and are long, so they're
+// collapsed to tap-to-read chips; the unit's own abilities stay in full.
+const SHARED_ABILITY_TYPES = { Core: "Core", Faction: "Army rules" };
+
+function SharedAbilityChips({ label, abilities, accent }) {
+  const [open, setOpen] = useState(null);
+  if (abilities.length === 0) return null;
+  const active = abilities.find((a) => a.name === open);
+  return (
+    <div className="px-4 py-3" style={{ background: "var(--wh-surface)" }}>
+      <div className="fs10 uppercase tracking-widest mb-2" style={{ color: "var(--wh-muted)" }}>{label}</div>
+      <div className="flex flex-wrap gap-1.5">
+        {abilities.map((a) => (
+          <button key={a.name} onClick={() => setOpen(open === a.name ? null : a.name)}
+            className="fs11 uppercase tracking-wider px-2 py-1 active:opacity-70"
+            style={{ background: open === a.name ? accent : "var(--wh-surface-alt)", color: "var(--wh-text)" }}>
+            {a.name}
+          </button>
+        ))}
+      </div>
+      {active && <div className="text-sm mt-3"><AbilityText text={active.text} accent={accent} /></div>}
+    </div>
+  );
+}
 
 export default function Datasheet({
   unit, armyUnits, detachment, editing = true, onBack, onRemove, onComposition, onPhoto, onWounds,
@@ -24,7 +50,8 @@ export default function Datasheet({
   // sub-views doesn't push/pop history and a back gesture from any of them
   // always lands straight back on the sheet.
   const [photoFlow, setPhotoFlow] = useState(null);
-  const primaryModel = unit.models && unit.models[0];
+  const abilities = unit.abilities || [];
+  const ownAbilities = abilities.filter((a) => !SHARED_ABILITY_TYPES[a.type]);
   const wounds = currentWounds(unit);
   const wMax = maxWounds(unit);
   const selectedComposition = compositionOption(unit);
@@ -47,6 +74,36 @@ export default function Datasheet({
     try { await onPhoto(dataUrl); } finally { setBusy(false); }
   };
 
+  const composition = unit.composition && unit.composition.length > 0 && (
+    <div className="px-3 pt-4">
+      <div className="px-4 py-3" style={{ background: "var(--wh-surface)" }}>
+        <div className="flex items-center justify-between gap-2">
+          <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Composition</span>
+          {unit.compositionText && <span className="fs10 text-right" style={{ color: "var(--wh-dim)" }}>{unit.compositionText}</span>}
+        </div>
+        {editing && unit.composition.length > 1 ? (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {unit.composition.map((opt, i) => {
+              const active = i === unit.compositionIndex;
+              return (
+                <button key={i} onClick={() => onComposition(i)} className="text-left px-3 py-2"
+                  style={{ background: active ? accent : "var(--wh-surface-alt)", color: active ? "var(--wh-text)" : "var(--wh-text-body)" }}>
+                  <div className="font-display text-sm leading-none">{opt.description}</div>
+                  <div className="fs10 tnum mt-1" style={{ color: active ? "rgba(232,226,212,0.8)" : "var(--wh-muted)" }}>{opt.points} pts</div>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex items-center justify-between mt-2">
+            <span className="font-display text-lg">{selectedComposition.description}</span>
+            <span className="font-display text-lg tnum" style={{ color: "var(--wh-accent-gold)" }}>{selectedComposition.points} pts</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="pb-10 max-w-xl mx-auto">
       <header className="sticky top-0 z-10 flex items-center gap-2 px-3 py-3 border-b" style={{ background: "var(--wh-bg)", borderColor: "var(--wh-border)" }}>
@@ -59,7 +116,7 @@ export default function Datasheet({
         {editing && <button onClick={onRemove} className="p-2 active:opacity-60" style={{ color: "var(--wh-muted)" }}><Trash2 size={18} /></button>}
       </header>
 
-      <div className="relative w-full overflow-hidden" style={{ background: "var(--wh-surface)", aspectRatio: "16 / 10" }}>
+      <div className="relative w-full overflow-hidden" style={{ background: "var(--wh-surface)", aspectRatio: "16 / 7" }}>
         {unit.photo ? (
           <img src={unit.photo} alt={unit.name} className="absolute inset-0 w-full h-full object-cover" />
         ) : (<Placeholder unit={unit} big />)}
@@ -89,76 +146,43 @@ export default function Datasheet({
         <PasteImageUrlSheet onClose={() => setPhotoFlow(null)} onPick={pickOnlineImage} />
       )}
 
-      {unit.legend && (
-        <div className="px-3 pt-4">
-          <p className="fs11 italic" style={{ color: "var(--wh-muted)" }}>{unit.legend}</p>
-        </div>
-      )}
-
-      {primaryModel && (
-        <div className="px-3 pt-4">
-          <StatBlock accent={accent} columns={2}
-            stats={STAT_ORDER.map((k) => ({ label: STAT_LABELS[k], value: primaryModel[k] }))} />
-        </div>
-      )}
+      <div className="px-3 pt-4">
+        <ProfileStats models={unit.models} accent={accent} />
+      </div>
 
       <div className="px-3 pt-4">
         <Counter label="Wounds remaining" value={wounds} max={wMax} suffix={` / ${wMax}`}
           onChange={(n) => onWounds(unit.instId, n)} />
       </div>
 
-      <EffectsPanel unit={unit} armyUnits={armyUnits} detachment={detachment} accent={accent} editing={editing}
-        onSetLeader={onSetLeader} onSetEnhancement={onSetEnhancement}
-        onAddCustomEffect={onAddCustomEffect} onRemoveCustomEffect={onRemoveCustomEffect} />
-
-      {unit.composition && unit.composition.length > 0 && (
-        <div className="px-3 pt-4">
-          <div className="px-4 py-3" style={{ background: "var(--wh-surface)" }}>
-            <div className="flex items-center justify-between gap-2">
-              <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Composition</span>
-              {unit.compositionText && <span className="fs10 text-right" style={{ color: "var(--wh-dim)" }}>{unit.compositionText}</span>}
-            </div>
-            {editing && unit.composition.length > 1 ? (
-              <div className="flex flex-wrap gap-2 mt-3">
-                {unit.composition.map((opt, i) => {
-                  const active = i === unit.compositionIndex;
-                  return (
-                    <button key={i} onClick={() => onComposition(i)} className="text-left px-3 py-2"
-                      style={{ background: active ? accent : "var(--wh-surface-alt)", color: active ? "var(--wh-text)" : "var(--wh-text-body)" }}>
-                      <div className="font-display text-sm leading-none">{opt.description}</div>
-                      <div className="fs10 tnum mt-1" style={{ color: active ? "rgba(232,226,212,0.8)" : "var(--wh-muted)" }}>{opt.points} pts</div>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="flex items-center justify-between mt-2">
-                <span className="font-display text-lg">{selectedComposition.description}</span>
-                <span className="font-display text-lg tnum" style={{ color: "var(--wh-accent-gold)" }}>{selectedComposition.points} pts</span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {editing && <WeaponSelector unit={unit} accent={accent} onToggle={(category, name) => onToggleWeapon(unit.instId, category, name)} />}
+      {editing && composition}
+      {editing && <WeaponSelector unit={unit} onToggle={(category, name) => onToggleWeapon(unit.instId, category, name)} />}
 
       <WeaponTable title="Ranged weapons" icon={<Swords size={13} />} weapons={weapons.ranged} ranged accent={accent} />
       <WeaponTable title="Melee weapons" icon={<Swords size={13} />} weapons={weapons.melee} accent={accent} />
 
-      {unit.abilities && unit.abilities.length > 0 && (
+      {abilities.length > 0 && (
         <section className="px-3 pt-5">
           <SectionLabel icon={<Shield size={13} />} accent={accent}>Abilities</SectionLabel>
           <div className="mt-2 space-y-px">
-            {unit.abilities.map((ab, i) => (
+            {ownAbilities.map((ab, i) => (
               <div key={i} className="px-4 py-3" style={{ background: "var(--wh-surface)" }}>
-                <span className="font-semibold" style={{ color: "var(--wh-accent-gold)" }}>{ab.name}.</span>{" "}
-                <AbilityText text={ab.text} accent={accent} />
+                <div className="font-semibold" style={{ color: "var(--wh-accent-gold)" }}>{ab.name}</div>
+                <div className="text-sm mt-1"><AbilityText text={ab.text} accent={accent} /></div>
               </div>
+            ))}
+            {Object.entries(SHARED_ABILITY_TYPES).map(([type, label]) => (
+              <SharedAbilityChips key={type} label={label} accent={accent} abilities={abilities.filter((a) => a.type === type)} />
             ))}
           </div>
         </section>
       )}
+
+      <EffectsPanel unit={unit} armyUnits={armyUnits} detachment={detachment} accent={accent} editing={editing}
+        onSetLeader={onSetLeader} onSetEnhancement={onSetEnhancement}
+        onAddCustomEffect={onAddCustomEffect} onRemoveCustomEffect={onRemoveCustomEffect} />
+
+      {!editing && composition}
 
       <section className="px-3 pt-5">
         <SectionLabel accent={accent}>Keywords</SectionLabel>
@@ -166,6 +190,12 @@ export default function Datasheet({
           {unit.keywords.map((k) => (<span key={k} className="fs10 uppercase tracking-widest px-2 py-1" style={{ background: "var(--wh-surface)", color: "var(--wh-muted)" }}>{k}</span>))}
         </div>
       </section>
+
+      {unit.legend && (
+        <div className="px-3 pt-5">
+          <p className="fs11 italic" style={{ color: "var(--wh-muted)" }}>{unit.legend}</p>
+        </div>
+      )}
     </div>
   );
 }

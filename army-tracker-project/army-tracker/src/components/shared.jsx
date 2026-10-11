@@ -8,15 +8,26 @@ export const STAT_LABELS = {
   M: "Movement", T: "Toughness", Sv: "Save", W: "Wounds", Ld: "Leadership", OC: "Objective Control",
 };
 
+// Datasheets print skills and invulnerable saves as "3+"; the data stores
+// some as bare numbers ("3", invSv "4"). "-"/"N/A"/null mean "none".
+const NO_VALUE = new Set(["", "-", "N/A", "null", "undefined"]);
+export function formatSkill(v) {
+  const s = String(v ?? "").trim();
+  if (s === "N/A") return s;
+  if (NO_VALUE.has(s)) return "–";
+  return /^\d+$/.test(s) ? `${s}+` : s;
+}
+export function formatInvuln(v) {
+  const s = String(v ?? "").trim();
+  if (NO_VALUE.has(s)) return null;
+  return s.replace(/^(\d+)(\+)?/, "$1+");
+}
+
 export function formatSyncDate(meta) {
   if (!meta?.lastUpdate) return null;
   const d = new Date(meta.lastUpdate.replace(" ", "T"));
   if (Number.isNaN(d.getTime())) return meta.lastUpdate;
   return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-}
-
-export function weaponLabels(ranged) {
-  return ["Range", "Attacks", ranged ? "Ballistic Skill" : "Weapon Skill", "Strength", "Armour Penetration", "Damage"];
 }
 
 export function Counter({ label, value, onChange, min = 0, max = Infinity, suffix }) {
@@ -71,19 +82,19 @@ export function SectionLabel({ children, icon, accent }) {
 // (see lib/weaponAbilities.js) expands a plain-language description below
 // the chip row. Unrecognized ones (unique flavor-named weapon rules) still
 // display, just without a description.
-function WeaponAbilityChips({ kw, accent }) {
+export function WeaponAbilityChips({ kw, accent }) {
   const [openLabel, setOpenLabel] = useState(null);
   const abilities = parseWeaponAbilities(kw);
   if (abilities.length === 0) return null;
   const open = abilities.find((a) => a.label === openLabel);
 
   return (
-    <div className="mt-2">
-      <div className="flex flex-wrap gap-1.5">
+    <div className="mt-1.5">
+      <div className="flex flex-wrap gap-1">
         {abilities.map((a) => (
           <button key={a.label} onClick={() => a.description && setOpenLabel(openLabel === a.label ? null : a.label)}
             disabled={!a.description}
-            className="fs10 uppercase tracking-widest px-2 py-1 active:opacity-70"
+            className="fs10 uppercase tracking-wider px-2 py-0.5 active:opacity-70"
             style={{
               background: openLabel === a.label ? accent : "var(--wh-surface-alt)",
               color: openLabel === a.label ? "var(--wh-text)" : a.description ? "var(--wh-text-body)" : "var(--wh-dim)",
@@ -140,18 +151,61 @@ export function AbilityText({ text, accent, className }) {
   );
 }
 
+// Characteristic profiles as a datasheet-style row (M T SV W LD OC, plus the
+// invulnerable save when any profile has one). Units whose models differ
+// (a sergeant, a mixed squad) get one row per distinct profile.
+export function ProfileStats({ models, accent }) {
+  if (!models || models.length === 0) return null;
+  const distinct = models.filter((m, i) =>
+    models.findIndex((o) => STAT_ORDER.every((k) => o[k] === m[k]) && o.invSv === m.invSv) === i);
+  const showInv = distinct.some((m) => formatInvuln(m.invSv));
+  const cols = STAT_ORDER.length + (showInv ? 1 : 0);
+  return (
+    <div className="space-y-1">
+      {distinct.map((m, i) => (
+        <div key={i}>
+          {distinct.length > 1 && <div className="fs11 font-semibold mb-1" style={{ color: "var(--wh-text-body)" }}>{m.name}</div>}
+          <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+            {STAT_ORDER.map((k) => (
+              <div key={k} className="text-center" style={{ background: "var(--wh-surface-alt)" }}>
+                <div className="fs10 font-semibold uppercase py-0.5" style={{ background: accent, color: "var(--wh-text)" }}>{k}</div>
+                <div className="font-display text-xl py-1.5 tnum leading-none">{m[k]}</div>
+              </div>
+            ))}
+            {showInv && (
+              <div className="text-center" style={{ background: "var(--wh-surface-alt)" }}>
+                <div className="fs10 font-semibold uppercase py-0.5" style={{ background: "var(--wh-accent-gold)", color: "var(--wh-bg)" }}>Inv</div>
+                <div className="font-display text-xl py-1.5 tnum leading-none">{formatInvuln(m.invSv) || "–"}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Weapons as a compact datasheet table: column headers once, then each
+// weapon as its name (plus tappable ability chips) over one row of numbers.
+const WEAPON_COLS = "minmax(0,1.3fr) repeat(5, minmax(0,1fr))";
 export function WeaponTable({ title, weapons, ranged, icon, accent }) {
   if (!weapons || weapons.length === 0) return null;
-  const labels = weaponLabels(ranged);
+  const headers = ["Range", "A", ranged ? "BS" : "WS", "S", "AP", "D"];
   return (
     <section className="px-3 pt-5">
       <SectionLabel icon={icon} accent={accent}>{title}</SectionLabel>
-      <div className="mt-2 space-y-2">
+      <div className="mt-2" style={{ background: "var(--wh-surface)" }}>
+        <div className="grid px-3 py-1.5 text-center fs10 font-semibold uppercase tracking-wider"
+          style={{ gridTemplateColumns: WEAPON_COLS, background: accent, color: "var(--wh-text)" }}>
+          {headers.map((h) => <div key={h}>{h}</div>)}
+        </div>
         {weapons.map((w, i) => (
-          <div key={i} className="px-3 py-3" style={{ background: "var(--wh-surface)" }}>
-            <div className="font-semibold fs15 mb-2">{w.name}</div>
-            <StatBlock accent={accent} columns={2}
-              stats={[w.range, w.A, w.skill, w.S, w.AP, w.D].map((value, j) => ({ label: labels[j], value }))} />
+          <div key={i} className="px-3 py-2.5" style={{ borderTop: i ? "1px solid var(--wh-bg)" : "none" }}>
+            <div className="font-semibold fs15 leading-snug">{w.name}</div>
+            <div className="grid mt-1 text-center font-display text-lg tnum leading-none"
+              style={{ gridTemplateColumns: WEAPON_COLS }}>
+              {[w.range, w.A, formatSkill(w.skill), w.S, w.AP, w.D].map((v, j) => <div key={j}>{v}</div>)}
+            </div>
             <WeaponAbilityChips kw={w.kw} accent={accent} />
           </div>
         ))}
@@ -200,8 +254,11 @@ export function UnitTile({ unit, armyUnits = [], selected = false, editing = fal
           </div>
           {primaryModel && (
             <div className="mt-1.5">
-              <StatBlock compact accent={accent} columns={6}
-                stats={STAT_ORDER.map((k) => ({ label: k, value: primaryModel[k] }))} />
+              <StatBlock compact accent={accent} columns={formatInvuln(primaryModel.invSv) ? 7 : 6}
+                stats={[
+                  ...STAT_ORDER.map((k) => ({ label: k, value: primaryModel[k] })),
+                  ...(formatInvuln(primaryModel.invSv) ? [{ label: "Inv", value: formatInvuln(primaryModel.invSv) }] : []),
+                ]} />
             </div>
           )}
         </div>
