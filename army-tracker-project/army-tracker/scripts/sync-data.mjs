@@ -230,7 +230,7 @@ function parseWahapediaCosts(rows) {
 }
 
 function buildWahapediaCatalog({
-  datasheets, modelsByDs, costByDs, wargearByDs, abilitiesByDs, keywordsByDs,
+  factionKeywords, datasheets, modelsByDs, costByDs, wargearByDs, abilitiesByDs, keywordsByDs,
   compositionByDs, optionsByDs, factionNames, abilityLib, canLeadByDs, canBeLedByDs,
 }) {
   return datasheets
@@ -260,12 +260,13 @@ function buildWahapediaCatalog({
         // Wahapedia links some shared Forge World datasheets (Cerberus,
         // Typhon, Falchion…) to another army's faction rule, e.g. the Space
         // Marines' Combat Doctrines on the Chaos copies. A faction rule that
-        // names keywords (Combat Doctrines: ADEPTUS ASTARTES) none of which
-        // the unit has doesn't belong to it.
+        // names faction keywords (Combat Doctrines: ADEPTUS ASTARTES) none of
+        // which the unit has doesn't belong to it. Only faction keywords
+        // count — rules also name things like WARLORD that no unit carries.
         .filter((a) => {
           if (a.type !== "Faction") return true;
           const lib = a.ability_id ? abilityLib.get(a.ability_id) : null;
-          const named = extractKeywords(lib ? lib.description : a.description);
+          const named = extractKeywords(lib ? lib.description : a.description).filter((k) => factionKeywords.has(k));
           return named.length === 0 || named.some((k) => dsKeywordSet.has(k));
         })
         .map((a) => {
@@ -513,8 +514,11 @@ async function main() {
     canBeLedByDs.get(attached_id).push(leader_id);
   }
 
+  const factionKeywords = new Set(
+    keywords.filter((k) => k.is_faction_keyword === "true").map((k) => (k.keyword || "").toUpperCase())
+  );
   const wahapediaCatalog = buildWahapediaCatalog({
-    datasheets, modelsByDs, costByDs, wargearByDs, abilitiesByDs, keywordsByDs,
+    factionKeywords, datasheets, modelsByDs, costByDs, wargearByDs, abilitiesByDs, keywordsByDs,
     compositionByDs, optionsByDs, factionNames, abilityLib, canLeadByDs, canBeLedByDs,
   });
 
