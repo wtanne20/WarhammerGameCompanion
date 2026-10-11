@@ -4,13 +4,25 @@
 // at build time, but scripts/sync-data.mjs already keeps the GitHub Pages
 // deploy fresh (weekly, see .github/workflows/sync-data.yml) — so on native
 // platforms this fetches that same live data on each app open and, if it's
-// newer than what's currently loaded, swaps it in and caches it via
-// window.storage so the next launch starts from the fresher copy even
-// offline. The web/PWA build doesn't need this: it's already served fresh
-// on every visit.
+// newer than what's currently loaded, swaps it in and caches it so the
+// next launch starts from the fresher copy even offline. The web/PWA build
+// doesn't need this: it's already served fresh on every visit.
+//
+// The cache lives in app-private files (@capacitor/filesystem), not
+// window.storage: on native that's the WebView's localStorage, capped at
+// ~5MB, and catalog.json alone is over that — writes failed silently, which
+// left an older cached copy in place that then shadowed even a newer APK's
+// bundled data. A cached copy is only used when it's newer than what this
+// APK bundles, so installing a new build always starts from at least its
+// own data.
+
+import { Capacitor } from "@capacitor/core";
+import { Filesystem, Directory } from "@capacitor/filesystem";
+import { withBase } from "./paths.js";
 
 const REMOTE_BASE = "https://wtanne20.github.io/WarhammerGameCompanion";
-const CACHE_PREFIX = "remote-data:";
+const CACHE_DIR = "remote-data";
+const LEGACY_CACHE_PREFIX = "remote-data:";
 
 const FILES = {
   catalog: "catalog.json",
@@ -21,17 +33,51 @@ const FILES = {
 
 async function readCache(key) {
   try {
-    const res = await window.storage.get(CACHE_PREFIX + key);
-    return res && res.value ? JSON.parse(res.value) : null;
+    const res = await Filesystem.readFile({ path: `${CACHE_DIR}/${key}.json`, directory: Directory.Data, encoding: "utf8" });
+    return JSON.parse(res.data);
   } catch {
     return null;
   }
 }
 
 async function writeCache(key, value) {
+  await Filesystem.writeFile({
+    path: `${CACHE_DIR}/${key}.json`, data: JSON.stringify(value),
+    directory: Directory.Data, encoding: "utf8", recursive: true,
+  });
+}
+
+// Earlier builds cached into window.storage; drop those copies so they stop
+// eating the localStorage quota that army photos share.
+let legacyCleared = false;
+async function clearLegacyCache() {
+  if (legacyCleared) return;
+  legacyCleared = true;
   try {
-    await window.storage.set(CACHE_PREFIX + key, JSON.stringify(value));
+    for (const key of ["meta", ...Object.keys(FILES)]) await window.storage.delete(LEGACY_CACHE_PREFIX + key);
   } catch { /* best effort */ }
+}
+
+// Whether the cached remote pull is newer than this APK's bundled data
+// (compared on meta.json's ISO `syncedAt`). Memoized per cache generation —
+// reset whenever refreshDataFromRemote writes a new one.
+let cacheUsable = null;
+function isCacheUsable() {
+  if (!cacheUsable) {
+    cacheUsable = (async () => {
+      await clearLegacyCache();
+      const cachedMeta = await readCache("meta");
+      if (!cachedMeta?.syncedAt) return false;
+      try {
+        const res = await fetch(withBase("/data/meta.json"));
+        const bundledMeta = res.ok ? await res.json() : null;
+        return !bundledMeta?.syncedAt || cachedMeta.syncedAt > bundledMeta.syncedAt;
+      } catch {
+        return true;
+      }
+    })();
+  }
+  return cacheUsable;
 }
 
 // Exported so the individual fetchCatalog()/fetchDetachments()/
@@ -40,11 +86,10 @@ async function writeCache(key, value) {
 // dispositions, are fetched lazily by their own component rather than
 // through App.jsx's boot sequence) can each prefer a previously-cached
 // remote pull over the APK-bundled copy, without needing to know anything
-// about Capacitor. On web this is always a harmless no-op: nothing ever
-// writes these keys there (see refreshDataFromRemote's native gating in
-// App.jsx), so the cache lookup just returns null and callers fall through
-// to their normal bundled fetch.
+// about Capacitor. Always null on web, which is served fresh anyway.
 export async function getCachedRemote(key) {
+  if (!Capacitor.isNativePlatform()) return null;
+  if (!(await isCacheUsable())) return null;
   return readCache(key);
 }
 
@@ -73,10 +118,12 @@ export async function refreshDataFromRemote(currentMeta) {
     const entries = await Promise.all(
       Object.entries(FILES).map(async ([key, fileName]) => [key, await fetchRemoteJson(fileName)])
     );
-    await Promise.all([
-      writeCache("meta", remoteMeta),
-      ...entries.map(([key, value]) => writeCache(key, value)),
-    ]);
+    // Data files first, meta last: meta is what marks the cache as complete
+    // and current, so a failed or interrupted write never leaves a new meta
+    // pointing at old data.
+    for (const [key, value] of entries) await writeCache(key, value);
+    await writeCache("meta", remoteMeta);
+    cacheUsable = null;
     return remoteMeta;
   } catch {
     return null;

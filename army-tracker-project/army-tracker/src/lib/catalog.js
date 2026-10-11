@@ -60,16 +60,66 @@ export function armyPoints(army) {
   return army.units.reduce((s, u) => s + unitPoints(u), 0);
 }
 
-// Approximate: composition options give a total model count (e.g. "10
-// models") but not a per-model-type breakdown for mixed squads (a Boyz mob's
-// Boss Nob has more wounds than a trooper), so this uses the primary
-// model's Wounds stat times the composition's model count. Close enough for
-// a live tracker; not exact for units with mixed profiles.
-export function maxWounds(unit) {
+// The models in this unit instance, each with its own Wounds, in datasheet
+// order (sergeant/leader first). Built from compositionText ("1 Intercessor
+// Sergeant model, 4-9 Intercessor models") matched against the model
+// profiles, with the chosen composition's total ("10 models") deciding how
+// many of each ranged entry there are. Falls back to N copies of the first
+// profile when the text can't be read.
+const modelKey = (s) => (s || "").toLowerCase().replace(/<[^>]+>/g, "").replace(/[^a-z0-9]+/g, " ").trim().replace(/s\b/g, "");
+
+export function unitModels(unit) {
   const opt = compositionOption(unit);
-  const modelCount = opt ? parseInt(opt.description, 10) : NaN;
-  const perModel = Number(unit.models?.[0]?.W) || 1;
-  return (Number.isFinite(modelCount) && modelCount > 0 ? modelCount : 1) * perModel;
+  const parsedTotal = opt ? parseInt(opt.description, 10) : NaN;
+  const total = Number.isFinite(parsedTotal) && parsedTotal > 0 ? parsedTotal : 1;
+  const profiles = unit.models || [];
+  const fallbackW = Number(profiles[0]?.W) || 1;
+  const fallback = () => Array.from({ length: total }, () => ({ name: profiles[0]?.name || unit.name, W: fallbackW }));
+
+  const text = (unit.compositionText || "").replace(/<[^>]+>/g, "");
+  const entries = text.split(/,\s*(?=\d)/).map((part) => {
+    const m = part.trim().match(/^(\d+)(?:-(\d+))?\s+(.+?)(?:\s+models?)?(?:\s+[–-]\s+.*)?$/i);
+    if (!m) return null;
+    const key = modelKey(m[3]);
+    const profile = profiles.find((p) => modelKey(p.name) === key)
+      || profiles.find((p) => key.startsWith(modelKey(p.name)) || modelKey(p.name).startsWith(key));
+    return { name: profile?.name || m[3], W: Number(profile?.W) || fallbackW, min: +m[1], max: m[2] ? +m[2] : +m[1] };
+  });
+  if (entries.length === 0 || entries.some((e) => !e)) return fallback();
+
+  const counts = entries.map((e) => e.min);
+  let left = total - counts.reduce((x, y) => x + y, 0);
+  // Extra models go to the most flexible entries first (the "4-9
+  // Intercessors" line, not a "1-2 Nobs" upgrade).
+  const order = entries.map((_, i) => i).sort((x, y) => (entries[y].max - entries[y].min) - (entries[x].max - entries[x].min));
+  for (const i of order) {
+    if (left <= 0) break;
+    const add = Math.min(left, entries[i].max - counts[i]);
+    counts[i] += add;
+    left -= add;
+  }
+  if (left !== 0) return fallback();
+  return entries.flatMap((e, i) => Array.from({ length: counts[i] }, () => ({ name: e.name, W: e.W })));
+}
+
+export function maxWounds(unit) {
+  return unitModels(unit).reduce((sum, m) => sum + m.W, 0);
+}
+
+// Spreads a unit's total remaining wounds across its models: damage is
+// taken one model at a time from the back of the list (rank-and-file
+// before the sergeant/leader listed first), so a single total is enough
+// to show exactly which models are gone and which one is wounded.
+export function modelWounds(unit) {
+  const models = unitModels(unit);
+  let damage = maxWounds(unit) - currentWounds(unit);
+  const out = models.map((m) => ({ ...m, remaining: m.W }));
+  for (let i = out.length - 1; i >= 0 && damage > 0; i--) {
+    const taken = Math.min(damage, out[i].W);
+    out[i].remaining -= taken;
+    damage -= taken;
+  }
+  return out;
 }
 
 export function currentWounds(unit) {
@@ -120,16 +170,48 @@ export function refreshUnits(units, catalog) {
   });
 }
 
+// A datasheet's starting loadout, read off its wargear-option text.
+// Wahapedia lists every profile a datasheet can take (defaults and swap-in
+// options together) with no structured link between them, but the option
+// text follows a fixed pattern: "X can be replaced with [bullets]" / "can
+// be equipped with Y". Weapons that only ever appear on the "replaced
+// with"/"equipped with" side are options; everything else is default kit.
+// Units with no option text (or where that would hide everything) keep all
+// their profiles.
+const weaponKey = (s) => s.toLowerCase().replace(/[’']/g, "").replace(/\s+[-–]\s+.*$/, "")
+  .replace(/[^a-z0-9]+/g, " ").trim().replace(/s\b/g, "");
+const looseText = (s) => ` ${s.toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, " ").replace(/s\b/g, "")} `;
+
+export function defaultWeaponSelection(unit) {
+  const all = [...unit.ranged, ...unit.melee];
+  const optional = new Set();
+  const named = new Set();
+  for (const option of unit.wargearOptions || []) {
+    for (const line of option.split("\n")) {
+      const bullet = /^\s*[•-]/.test(line);
+      const cut = line.search(/\b(replaced with|equipped with)\b/i);
+      const before = bullet ? "" : cut < 0 ? line : line.slice(0, cut);
+      const after = bullet ? line : cut < 0 ? "" : line.slice(cut);
+      for (const w of all) {
+        const key = weaponKey(w.name);
+        if (!key) continue;
+        if (before && looseText(before).includes(` ${key} `)) named.add(key);
+        if (after && looseText(after).includes(` ${key} `)) optional.add(key);
+      }
+    }
+  }
+  const keep = (w) => { const k = weaponKey(w.name); return !optional.has(k) || named.has(k); };
+  if (!all.some(keep)) return { ranged: unit.ranged.map((w) => w.name), melee: unit.melee.map((w) => w.name) };
+  return { ranged: unit.ranged.filter(keep).map((w) => w.name), melee: unit.melee.filter(keep).map((w) => w.name) };
+}
+
 // Which of the datasheet's weapon profiles this particular unit instance is
-// actually equipped with. Wahapedia lists every profile a datasheet can take
-// (defaults and swap-in options together) with no structured link back to
-// which wargear-option text enables which profile, so unit.weaponSelection
-// is the player's own manual choice — undefined means "everything" (the
-// unfiltered default, same as before this existed).
+// actually equipped with: the player's own choice (unit.weaponSelection,
+// edited from the datasheet's loadout mode), or the default loadout above.
 export function selectedWeapons(unit) {
-  const sel = unit.weaponSelection;
+  const sel = unit.weaponSelection || defaultWeaponSelection(unit);
   return {
-    ranged: sel ? unit.ranged.filter((w) => sel.ranged.includes(w.name)) : unit.ranged,
-    melee: sel ? unit.melee.filter((w) => sel.melee.includes(w.name)) : unit.melee,
+    ranged: unit.ranged.filter((w) => sel.ranged.includes(w.name)),
+    melee: unit.melee.filter((w) => sel.melee.includes(w.name)),
   };
 }

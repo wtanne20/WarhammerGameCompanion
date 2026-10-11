@@ -80,6 +80,12 @@ function stripHtml(input) {
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    // Sub-headings inside rule text (e.g. the Space Marines Combat
+    // Doctrines' "ASSAULT DOCTRINE" / "DEVASTATOR DOCTRINE") are inline
+    // markup with no separator, so they'd land glued to the next sentence
+    // ("ASSAULT DOCTRINEWhen…"). Two or more all-caps words fused onto a
+    // capitalized word get a line break instead.
+    .replace(/\b([A-Z][A-Z’']+(?: [A-Z][A-Z’']+)+)(?=[A-Z][a-z])/g, "$1\n")
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
@@ -224,7 +230,7 @@ function parseWahapediaCosts(rows) {
 }
 
 function buildWahapediaCatalog({
-  datasheets, modelsByDs, costByDs, wargearByDs, abilitiesByDs, keywordsByDs,
+  factionKeywords, abilityOwnerFaction, datasheets, modelsByDs, costByDs, wargearByDs, abilitiesByDs, keywordsByDs,
   compositionByDs, optionsByDs, factionNames, abilityLib, canLeadByDs, canBeLedByDs,
 }) {
   return datasheets
@@ -249,7 +255,24 @@ function buildWahapediaCatalog({
           ranged: w.type === "Ranged",
         }));
 
+      const dsKeywordSet = new Set((keywordsByDs.get(d.id) || []).map((k) => (k.keyword || "").toUpperCase()));
       const dsAbilities = (abilitiesByDs.get(d.id) || [])
+        // Wahapedia links some shared Forge World datasheets (Cerberus,
+        // Typhon, Falchion…) to another army's faction rule, e.g. the Space
+        // Marines' Combat Doctrines on the Chaos copies. A faction rule that
+        // names faction keywords (Combat Doctrines: ADEPTUS ASTARTES) none of
+        // which the unit has, and that's mostly carried by another faction's
+        // datasheets, doesn't belong to it. Only faction keywords count —
+        // rules also name things like WARLORD that no unit carries — and the
+        // ownership check keeps rules Wahapedia under-keywords on their own
+        // army (e.g. Death Guard characters missing DEATH GUARD).
+        .filter((a) => {
+          if (a.type !== "Faction" || !a.ability_id) return true;
+          if (abilityOwnerFaction.get(a.ability_id) === d.faction_id) return true;
+          const lib = a.ability_id ? abilityLib.get(a.ability_id) : null;
+          const named = extractKeywords(lib ? lib.description : a.description).filter((k) => factionKeywords.has(k));
+          return named.length === 0 || named.some((k) => dsKeywordSet.has(k));
+        })
         .map((a) => {
           const lib = a.ability_id ? abilityLib.get(a.ability_id) : null;
           const { name, text } = fillAbilityParameter(
@@ -261,7 +284,7 @@ function buildWahapediaCatalog({
         })
         .filter((a) => a.name);
 
-      const dsKeywords = (keywordsByDs.get(d.id) || []).map((k) => k.keyword).filter(Boolean);
+      const dsKeywords = [...new Set((keywordsByDs.get(d.id) || []).map((k) => k.keyword).filter(Boolean))];
 
       const compositionText = (compositionByDs.get(d.id) || [])
         .sort(byLine)
@@ -495,8 +518,24 @@ async function main() {
     canBeLedByDs.get(attached_id).push(leader_id);
   }
 
+  const factionKeywords = new Set(
+    keywords.filter((k) => k.is_faction_keyword === "true").map((k) => (k.keyword || "").toUpperCase())
+  );
+  // Which faction's datasheets carry each faction rule most often.
+  const factionByDs = new Map(datasheets.map((d) => [d.id, d.faction_id]));
+  const ownerCounts = new Map();
+  for (const a of abilityLinks) {
+    if (a.type !== "Faction" || !a.ability_id) continue;
+    const counts = ownerCounts.get(a.ability_id) || new Map();
+    const f = factionByDs.get(a.datasheet_id);
+    counts.set(f, (counts.get(f) || 0) + 1);
+    ownerCounts.set(a.ability_id, counts);
+  }
+  const abilityOwnerFaction = new Map(
+    [...ownerCounts].map(([id, counts]) => [id, [...counts].sort((x, y) => y[1] - x[1])[0][0]])
+  );
   const wahapediaCatalog = buildWahapediaCatalog({
-    datasheets, modelsByDs, costByDs, wargearByDs, abilitiesByDs, keywordsByDs,
+    factionKeywords, abilityOwnerFaction, datasheets, modelsByDs, costByDs, wargearByDs, abilitiesByDs, keywordsByDs,
     compositionByDs, optionsByDs, factionNames, abilityLib, canLeadByDs, canBeLedByDs,
   });
 
