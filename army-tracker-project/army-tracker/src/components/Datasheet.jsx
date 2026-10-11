@@ -152,6 +152,10 @@ export default function Datasheet({
         <WoundTracker unit={unit} onChange={(n) => onWounds(unit.instId, n)} />
       </div>
 
+      <EffectsPanel unit={unit} armyUnits={armyUnits} detachment={detachment} accent={accent} editing={editing}
+        onSetLeader={onSetLeader} onSetEnhancement={onSetEnhancement}
+        onAddCustomEffect={onAddCustomEffect} onRemoveCustomEffect={onRemoveCustomEffect} />
+
       {editing && composition}
 
       {editingLoadout && unit.wargearOptions && unit.wargearOptions.length > 0 && (
@@ -202,9 +206,6 @@ export default function Datasheet({
         </section>
       )}
 
-      <EffectsPanel unit={unit} armyUnits={armyUnits} detachment={detachment} accent={accent} editing={editing}
-        onSetLeader={onSetLeader} onSetEnhancement={onSetEnhancement}
-        onAddCustomEffect={onAddCustomEffect} onRemoveCustomEffect={onRemoveCustomEffect} />
 
       {!editing && composition}
 
