@@ -1,10 +1,10 @@
 {
   "source": "40kdc-data (stats/points/weapons) + wahapedia.ru/wh40k11ed (rules text)",
-  "lastUpdate": "2026-10-12 02:57:26",
-  "syncedAt": "2026-10-12T14:16:11.420Z",
-  "unitCount": 1459,
+  "lastUpdate": "2026-10-19 03:47:32",
+  "syncedAt": "2026-10-19T11:57:23.711Z",
+  "unitCount": 1478,
   "unitCount40kdc": 1090,
-  "unitCountWahapediaFallback": 369,
+  "unitCountWahapediaFallback": 388,
   "statsSource": "wahapedia",
-  "unitsWithWahapediaNumbers": 981
+  "unitsWithWahapediaNumbers": 972
 }
