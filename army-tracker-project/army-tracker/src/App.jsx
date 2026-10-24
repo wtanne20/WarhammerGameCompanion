@@ -13,7 +13,7 @@ import { checkForAppUpdate, downloadAndInstallUpdate } from "./lib/appUpdate.js"
 import { THEME_CSS, loadTheme, saveTheme } from "./lib/theme.js";
 import { shareArmy, importArmy } from "./lib/shareArmy.js";
 import { loadOwned, saveOwned } from "./lib/collection.js";
-import { fetchDetachments, detachmentsForFaction } from "./lib/detachments.js";
+import { fetchDetachments, detachmentsForFaction, armyDetachmentIds, combineDetachments, isMatchedPlay } from "./lib/detachments.js";
 import { fetchStratagems } from "./lib/stratagems.js";
 import { fetchIconManifest } from "./lib/icons.js";
 import { useCloseOnBack } from "./lib/useCloseOnBack.js";
@@ -104,10 +104,14 @@ export default function App() {
   useCloseOnBack(pickingIcon, () => setPickingIcon(false));
 
   const factions = useMemo(() => [...new Set(catalog.map((c) => c.faction))].sort(), [catalog]);
-  const detachment = useMemo(
-    () => (army?.detachmentId ? detachments.find((d) => d.id === army.detachmentId) : null) || null,
+  // The army's detachments (11e armies can take several — see
+  // lib/detachments.js), and the same merged into one detachment-shaped
+  // object for everything that just needs "the army's rules/enhancements".
+  const selectedDetachments = useMemo(
+    () => armyDetachmentIds(army).map((id) => detachments.find((d) => d.id === id)).filter(Boolean),
     [army, detachments]
   );
+  const detachment = useMemo(() => combineDetachments(selectedDetachments), [selectedDetachments]);
 
   // Swaps freshly-fetched catalog/detachment/stratagem data into state and
   // re-runs every stored army against it — shared by the native boot-time
@@ -350,10 +354,17 @@ export default function App() {
     setArmy((a) => ({ ...a, icon }));
     setPickingIcon(false);
   };
-  const pickDetachment = (id) => {
-    setArmy((a) => ({ ...a, detachmentId: id }));
-    setPickingDetachment(false);
+  // Tapping a detachment in the picker adds it, or removes it if it's
+  // already in the army.
+  const toggleDetachment = (id) => {
+    setArmy((a) => {
+      const ids = armyDetachmentIds(a);
+      const next = ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id];
+      const { detachmentId, ...rest } = a;
+      return { ...rest, detachmentIds: next };
+    });
   };
+  const setBattleSize = (size) => setArmy((a) => ({ ...a, battleSize: size }));
   const resetGame = () => {
     setConfirmDialog({
       message: "Reset wounds and effects for every unit in this army?",
@@ -480,7 +491,8 @@ export default function App() {
               isWide ? (
                 <div className="flex" style={{ height: "calc(100vh - 64px)" }}>
                   <div className="overflow-y-auto shrink-0" style={{ width: 400, borderRight: "1px solid var(--wh-border)" }}>
-                    <Roster army={army} detachment={detachment} stratagems={stratagems}
+                    <Roster army={army} detachments={selectedDetachments} stratagems={stratagems}
+                      onRemoveDetachment={toggleDetachment} onSetBattleSize={setBattleSize}
                       onRename={(name) => setArmy((a) => ({ ...a, name }))}
                       onSelect={setSelectedUnitId}
                       onAdd={() => setAdding(true)}
@@ -516,7 +528,8 @@ export default function App() {
                   </div>
                 </div>
               ) : (
-                <Roster army={army} detachment={detachment} stratagems={stratagems}
+                <Roster army={army} detachments={selectedDetachments} stratagems={stratagems}
+                      onRemoveDetachment={toggleDetachment} onSetBattleSize={setBattleSize}
                   onRename={(name) => setArmy((a) => ({ ...a, name }))}
                   onSelect={setSelectedUnitId}
                   onAdd={() => setAdding(true)}
@@ -538,7 +551,7 @@ export default function App() {
             )
           )}
 
-          {tab === "rules" && <RulesPage />}
+          {tab === "rules" && <RulesPage detachments={detachments} stratagems={stratagems} armyFaction={army?.faction} />}
 
           {tab === "settings" && (
             <Settings meta={meta} onCheckRulesUpdate={handleCheckRulesUpdate}
@@ -555,8 +568,9 @@ export default function App() {
       {creatingArmy && <FactionPicker factions={factions} onClose={() => setCreatingArmy(false)} onPick={pickFaction} />}
       {importingArmy && <ImportArmySheet onClose={() => setImportingArmy(false)} onImport={handleImportArmy} />}
       {pickingDetachment && army && (
-        <DetachmentPicker detachments={detachmentsForFaction(detachments, army.faction)}
-          onClose={() => setPickingDetachment(false)} onPick={pickDetachment} />
+        <DetachmentPicker detachments={detachmentsForFaction(detachments, army.faction).filter(isMatchedPlay)}
+          army={army} selected={selectedDetachments}
+          onClose={() => setPickingDetachment(false)} onToggle={toggleDetachment} />
       )}
       {pickingIcon && army && (
         <IconPicker icons={icons} onClose={() => setPickingIcon(false)} onPick={pickIcon} />

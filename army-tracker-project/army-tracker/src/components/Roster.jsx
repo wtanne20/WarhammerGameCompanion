@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Plus, RotateCcw, ChevronRight, ChevronDown, ImagePlus } from "lucide-react";
+import { Plus, RotateCcw, ChevronRight, ChevronDown, ImagePlus, X } from "lucide-react";
+import { BATTLE_SIZES, battleSize, dpUsed } from "../lib/detachments.js";
 import { armyPoints, factionAccent } from "../lib/catalog.js";
 import { isLibraryIcon } from "../lib/icons.js";
 import { withBase } from "../lib/paths.js";
@@ -54,25 +55,21 @@ function groupByRole(units) {
   return [...known, ...rest].map((category) => [category, groups.get(category).sort((a, b) => a.name.localeCompare(b.name))]);
 }
 
-function DetachmentCard({ detachment, playing, onOpenDetachmentPicker, accent }) {
+function DetachmentCard({ detachment, playing, onRemove, accent }) {
   const [expanded, setExpanded] = useState(false);
   return (
     <div style={{ background: "var(--wh-surface)" }}>
       <div className="w-full flex items-center gap-2 pr-2">
-        {playing ? (
-          <div className="min-w-0 flex-1 px-4 py-3">
-            <div className="fs10 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Detachment</div>
-            <div className="font-display uppercase tracking-wide text-base mt-0.5 truncate">{detachment.name}</div>
-          </div>
-        ) : (
-          <button onClick={onOpenDetachmentPicker} className="min-w-0 flex-1 text-left px-4 py-3 active:opacity-80">
-            <div className="fs10 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Detachment</div>
-            <div className="font-display uppercase tracking-wide text-base mt-0.5 truncate">{detachment.name}</div>
+        <button onClick={() => setExpanded((v) => !v)} className="min-w-0 flex-1 flex items-center gap-3 text-left px-4 py-3 active:opacity-80">
+          <span className="font-display text-base tnum shrink-0 px-1.5" style={{ color: "var(--wh-accent-gold)", border: "1px solid var(--wh-border)" }}>{detachment.dp ?? "?"}</span>
+          <span className="font-display uppercase tracking-wide text-base truncate">{detachment.name}</span>
+          <span className="ml-auto shrink-0" style={{ color: "var(--wh-muted)" }}>{expanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}</span>
+        </button>
+        {!playing && (
+          <button onClick={() => onRemove(detachment.id)} className="p-2 shrink-0 active:opacity-70" title="Remove detachment" style={{ color: "var(--wh-muted)" }}>
+            <X size={16} />
           </button>
         )}
-        <button onClick={() => setExpanded((v) => !v)} className="p-2 shrink-0 active:opacity-70" style={{ color: "var(--wh-muted)" }}>
-          {expanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-        </button>
       </div>
       {expanded && (
         <div className="px-4 pb-3 space-y-3">
@@ -83,6 +80,46 @@ function DetachmentCard({ detachment, playing, onOpenDetachmentPicker, accent })
             </div>
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+// Battle size sets the detachment-point budget (lib/detachments.js); the
+// army's detachments are listed under it with their DP cost.
+function DetachmentsSection({ army, detachments, playing, onOpenDetachmentPicker, onRemoveDetachment, onSetBattleSize, accent }) {
+  const size = battleSize(army);
+  const used = dpUsed(detachments);
+  const canAdd = detachments.length === 0 || used < size.dp;
+  return (
+    <div className="space-y-px">
+      <div className="flex items-center justify-between gap-2 px-4 py-2" style={{ background: "var(--wh-surface)" }}>
+        <span className="fs10 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>
+          Detachments · <span className="tnum" style={{ color: used > size.dp && detachments.length > 1 ? "#D98C4A" : "var(--wh-text)" }}>{used}/{size.dp} DP</span>
+        </span>
+        {playing ? (
+          <span className="fs10 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>{size.label}</span>
+        ) : (
+          <div className="flex gap-1">
+            {BATTLE_SIZES.map((b) => (
+              <button key={b.id} onClick={() => onSetBattleSize(b.id)} className="fs10 uppercase tracking-widest px-2 py-1 active:opacity-70"
+                style={{ background: b.id === size.id ? accent : "var(--wh-surface-alt)", color: b.id === size.id ? "var(--wh-text)" : "var(--wh-text-body)" }}>
+                {b.points}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {detachments.map((d) => (
+        <DetachmentCard key={d.id} detachment={d} playing={playing} onRemove={onRemoveDetachment} accent={accent} />
+      ))}
+      {!playing && canAdd && (
+        <button onClick={onOpenDetachmentPicker} className="w-full flex items-center justify-between px-4 py-3 active:opacity-80" style={{ background: "var(--wh-surface)" }}>
+          <span className="flex items-center gap-2 fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>
+            <Plus size={14} /> {detachments.length ? "Add another detachment" : "Choose a detachment"}
+          </span>
+          <ChevronRight size={18} style={{ color: "var(--wh-muted)" }} />
+        </button>
       )}
     </div>
   );
@@ -101,7 +138,8 @@ function ModeToggle({ playing, onChange }) {
 }
 
 export default function Roster({
-  army, detachment, stratagems, onRename, onSelect, onAdd, onOpenDetachmentPicker, onResetGame, onSetMode, onOpenIconPicker,
+  army, detachments, stratagems, onRename, onSelect, onAdd, onOpenDetachmentPicker, onRemoveDetachment, onSetBattleSize,
+  onResetGame, onSetMode, onOpenIconPicker,
   selectedUnitId, fixedAddButton = true, onDuplicateUnit, onDeleteUnit,
 }) {
   const total = armyPoints(army);
@@ -141,17 +179,13 @@ export default function Roster({
       </header>
 
       <div className="px-4 pt-4">
-        {detachment ? (
-          <DetachmentCard detachment={detachment} playing={playing} onOpenDetachmentPicker={onOpenDetachmentPicker} accent={accent} />
-        ) : !playing ? (
-          <button onClick={onOpenDetachmentPicker} className="w-full flex items-center justify-between px-4 py-3 active:opacity-80" style={{ background: "var(--wh-surface)" }}>
-            <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Choose a detachment</span>
-            <ChevronRight size={18} style={{ color: "var(--wh-muted)" }} />
-          </button>
-        ) : null}
+        {(detachments.length > 0 || !playing) && (
+          <DetachmentsSection army={army} detachments={detachments} playing={playing} accent={accent}
+            onOpenDetachmentPicker={onOpenDetachmentPicker} onRemoveDetachment={onRemoveDetachment} onSetBattleSize={onSetBattleSize} />
+        )}
 
         <div className="mt-2">
-          <StratagemsPanel stratagems={stratagems} detachmentId={army.detachmentId} accent={accent} />
+          <StratagemsPanel stratagems={stratagems} detachments={detachments} accent={accent} />
         </div>
 
         {army.units.length > 0 && (

@@ -51,3 +51,60 @@ export function unitMatchesAbility(unit, ability) {
     return name.split(" ").some((word) => word.length > 4 && text.includes(word));
   });
 }
+
+// ---- 11th edition: several detachments per army ---------------------------
+// Each detachment costs 1-3 detachment points (dp, from Wahapedia's
+// Detachments.csv), spent from a budget set by the battle size: 2 DP at
+// Incursion (1000 pts), 3 DP at Strike Force (2000 pts). Any single
+// detachment can always be taken on its own whatever its cost, and two
+// detachments sharing a tag ("only one Reverend detachment") can't be
+// combined. Detachments with a `type` belong to other game modes (Boarding
+// Actions) and aren't offered in a normal game.
+export const BATTLE_SIZES = [
+  { id: "incursion", label: "Incursion", points: 1000, dp: 2 },
+  { id: "strike-force", label: "Strike Force", points: 2000, dp: 3 },
+];
+export const DEFAULT_BATTLE_SIZE = "strike-force";
+
+export function battleSize(army) {
+  return BATTLE_SIZES.find((b) => b.id === army?.battleSize) || BATTLE_SIZES.find((b) => b.id === DEFAULT_BATTLE_SIZE);
+}
+
+// Older armies stored a single detachmentId.
+export function armyDetachmentIds(army) {
+  if (!army) return [];
+  if (Array.isArray(army.detachmentIds)) return army.detachmentIds;
+  return army.detachmentId ? [army.detachmentId] : [];
+}
+
+export const isMatchedPlay = (d) => !d.type;
+
+export function dpUsed(selected) {
+  return selected.reduce((sum, d) => sum + (d.dp || 0), 0);
+}
+
+// Whether `candidate` can be added next to the already-selected detachments,
+// and if not, why (shown on the picker row).
+export function detachmentAvailability(candidate, selected, budget) {
+  if (selected.some((d) => d.id === candidate.id)) return { ok: true, selected: true };
+  if (selected.length === 0) return { ok: true };
+  const clash = selected.find((d) => (d.tags || []).some((t) => (candidate.tags || []).includes(t)));
+  if (clash) return { ok: false, reason: `Can't be taken with ${clash.name}` };
+  const left = budget - dpUsed(selected);
+  if ((candidate.dp || 0) > left) return { ok: false, reason: `Needs ${candidate.dp} DP, ${Math.max(0, left)} left` };
+  return { ok: true };
+}
+
+// The army's detachments merged into one detachment-shaped object, so
+// everything that reads detachment rules/enhancements (EffectsPanel,
+// enhancement points) works unchanged. Each rule and enhancement keeps the
+// name of the detachment it came from.
+export function combineDetachments(selected) {
+  if (selected.length === 0) return null;
+  return {
+    id: selected.map((d) => d.id).join("+"),
+    name: selected.map((d) => d.name).join(" + "),
+    abilities: selected.flatMap((d) => d.abilities.map((a) => ({ ...a, source: d.name }))),
+    enhancements: selected.flatMap((d) => d.enhancements.map((e) => ({ ...e, source: d.name }))),
+  };
+}
