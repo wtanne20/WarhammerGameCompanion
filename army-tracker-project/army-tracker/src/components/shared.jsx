@@ -312,15 +312,19 @@ export function UnitTile({ unit, armyUnits = [], selected = false, editing = fal
   const wounds = currentWounds(unit);
   const wMax = maxWounds(unit);
   const damaged = wounds < wMax;
+  const destroyed = wounds === 0;
+  const models = modelWounds(unit);
+  const modelsLeft = models.filter((m) => m.remaining > 0).length;
   const primaryModel = unit.models && unit.models[0];
   const leader = unit.leaderInstId ? armyUnits.find((u) => u.instId === unit.leaderInstId) : null;
   const leading = armyUnits.find((u) => u.leaderInstId === unit.instId);
 
   return (
     <div className="w-full flex items-stretch overflow-hidden" style={{ background: selected ? "var(--wh-surface-selected)" : "var(--wh-surface)" }}>
-      <button onClick={onClick} className="flex-1 min-w-0 flex items-stretch text-left active:opacity-80 transition-opacity">
+      <button onClick={onClick} className="flex-1 min-w-0 flex items-stretch text-left active:opacity-80 transition-opacity"
+        style={destroyed ? { opacity: 0.55 } : undefined}>
         <div style={{ width: 4, background: selected ? "var(--wh-accent)" : accent, flexShrink: 0 }} />
-        <div className="relative shrink-0 overflow-hidden" style={{ width: 72 }}>
+        <div className="relative shrink-0 overflow-hidden" style={{ width: 72, filter: destroyed ? "grayscale(1)" : undefined }}>
           {unit.photo ? (
             <img src={unit.photo} alt={unit.name} className="absolute inset-0 w-full h-full object-cover" />
           ) : (<Placeholder unit={unit} />)}
@@ -328,7 +332,8 @@ export function UnitTile({ unit, armyUnits = [], selected = false, editing = fal
         <div className="flex-1 min-w-0 px-3 py-2">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <div className="font-display uppercase tracking-wide text-sm leading-tight truncate">{unit.name}</div>
+              <div className="font-display uppercase tracking-wide text-sm leading-tight truncate"
+                style={destroyed ? { textDecoration: "line-through", textDecorationThickness: 2 } : undefined}>{unit.name}</div>
               <div className="fs9 uppercase tracking-widest mt-0.5" style={{ color: "var(--wh-muted)" }}>
                 {unit.faction}{opt ? ` · ${opt.description}` : ""}
               </div>
@@ -341,7 +346,6 @@ export function UnitTile({ unit, armyUnits = [], selected = false, editing = fal
             </div>
             <div className="text-right shrink-0">
               <div className="font-display text-sm tnum" style={{ color: "var(--wh-accent-gold)" }}>{unitPoints(unit)}</div>
-              {damaged && <div className="fs9 tnum mt-0.5" style={{ color: "#D98C4A" }}>{wounds}/{wMax} W</div>}
             </div>
           </div>
           {primaryModel && (
@@ -351,6 +355,24 @@ export function UnitTile({ unit, armyUnits = [], selected = false, editing = fal
                   ...STAT_ORDER.map((k) => ({ label: k, value: primaryModel[k] })),
                   ...(formatInvuln(primaryModel.invSv) ? [{ label: "Inv", value: formatInvuln(primaryModel.invSv) }] : []),
                 ]} />
+            </div>
+          )}
+          {destroyed ? (
+            <div className="mt-1.5 fs11 font-semibold uppercase tracking-widest" style={{ color: "#C97B7B" }}>✕ Destroyed</div>
+          ) : (
+            <div className="mt-1.5 flex items-center gap-2">
+              {/* One segment per model, sized by its Wounds and filled by
+                  what it has left, so a hurt squad reads at a glance. */}
+              <div className="flex-1 flex gap-px" style={{ height: 6 }}>
+                {models.map((m, i) => (
+                  <div key={i} className="relative overflow-hidden" style={{ flex: m.W, background: "var(--wh-border)" }}>
+                    <div className="absolute inset-y-0 left-0" style={{ width: `${(m.remaining / m.W) * 100}%`, background: damaged ? "#D98C4A" : "var(--wh-accent-gold)" }} />
+                  </div>
+                ))}
+              </div>
+              <span className="fs10 tnum shrink-0" style={{ color: damaged ? "#D98C4A" : "var(--wh-muted)" }}>
+                {wounds}/{wMax} W{models.length > 1 ? ` · ${modelsLeft}/${models.length} models` : ""}
+              </span>
             </div>
           )}
         </div>
