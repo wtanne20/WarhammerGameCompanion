@@ -43,6 +43,7 @@ const FILES = [
   "Factions",
   "Abilities",
   "Detachment_abilities",
+  "Detachments",
   "Enhancements",
   "Stratagems",
   "Last_update",
@@ -495,7 +496,7 @@ async function main() {
   const [
     datasheets, models, modelsCost, wargear, abilityLinks,
     keywords, unitComposition, options, leaderPairs, factions, abilities,
-    detachmentAbilities, enhancements, stratagems, lastUpdate,
+    detachmentAbilities, detachmentInfo, enhancements, stratagems, lastUpdate,
   ] = await Promise.all(FILES.map(fetchCsv));
 
   const factionNames = new Map(factions.map((f) => [f.id, f.name]));
@@ -560,10 +561,23 @@ async function main() {
   // Codex rework left leftover rows from removed detachments) — grouping them
   // would surface a nameless, empty detachment in the picker.
   detachmentRows.delete("");
+  // Detachments.csv carries each detachment's 11e detachment-point cost
+  // (`dp`, 1-3, spent from the army's budget: 2 at Incursion, 3 at Strike
+  // Force), its Force Disposition, and a `type` that is blank for
+  // matched-play detachments and set for other game modes ("Boarding
+  // Actions") the app shouldn't offer in a normal game. Tags (the "only one
+  // detachment of this kind" rule) aren't in Wahapedia's export, so they
+  // come from 40kdc-data by name where it has them.
+  const detachmentInfoById = new Map(detachmentInfo.map((d) => [d.id, d]));
+  const kdcTagsByName = new Map(ds.detachments.all.filter((d) => d.tags?.length).map((d) => [normalizeName(d.name), d.tags]));
   const detachments = [...detachmentRows.entries()].map(([detachmentId, rows]) => ({
     id: detachmentId,
     faction: FACTION_FIXES[factionNames.get(rows[0].faction_id)] || factionNames.get(rows[0].faction_id) || rows[0].faction_id,
     name: rows[0].detachment,
+    dp: Number(detachmentInfoById.get(detachmentId)?.dp) || null,
+    type: detachmentInfoById.get(detachmentId)?.type || "",
+    forceDisposition: detachmentInfoById.get(detachmentId)?.force_disposition || "",
+    tags: kdcTagsByName.get(normalizeName(rows[0].detachment)) || [],
     abilities: rows.map((r) => ({
       name: r.name,
       legend: stripHtml(r.legend),
