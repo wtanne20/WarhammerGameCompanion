@@ -40,7 +40,9 @@ export async function armyExportPayload(armyId) {
       name: army.name,
       faction: army.faction,
       icon: army.icon,
+      detachmentIds: army.detachmentIds,
       detachmentId: army.detachmentId,
+      battleSize: army.battleSize,
       units: army.units.map(stripUnit),
     },
   };
@@ -97,7 +99,7 @@ export async function importArmy(armyData) {
   // — so a freshly-generated instId needs its photo persisted separately,
   // same as setPhoto() does for a photo taken/picked normally.
   await Promise.all(units.filter((u) => u.photo).map((u) => setUnitPhoto(u.instId, u.photo)));
-  const army = { ...created, icon: armyData.icon, detachmentId: armyData.detachmentId, units };
+  const army = { ...created, icon: armyData.icon, detachmentId: armyData.detachmentId, detachmentIds: armyData.detachmentIds, battleSize: armyData.battleSize, units };
   await saveArmy(army);
   return army;
 }

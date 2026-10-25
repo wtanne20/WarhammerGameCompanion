@@ -116,7 +116,7 @@ export default function EffectsPanel({
                 {detachment.enhancements.map((e) => (
                   <Chip key={e.id} active={unit.enhancementId === e.id} accent={accent} onClick={() => onSetEnhancement(unit.instId, e.id)}>
                     <div className="font-display text-sm">{e.name}</div>
-                    <div className="fs10 tnum mt-0.5" style={{ color: unit.enhancementId === e.id ? "rgba(232,226,212,0.8)" : "var(--wh-muted)" }}>{e.points} pts</div>
+                    <div className="fs10 tnum mt-0.5" style={{ color: unit.enhancementId === e.id ? "rgba(232,226,212,0.8)" : "var(--wh-muted)" }}>{e.points} pts{e.source ? ` · ${e.source}` : ""}</div>
                   </Chip>
                 ))}
               </div>
@@ -136,7 +136,7 @@ export default function EffectsPanel({
 
         {matchedAbilities.map((a, i) => (
           <div key={i} className="px-3 py-2" style={{ background: "var(--wh-surface)" }}>
-            <div className="fs10 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Possible detachment bonus — verify</div>
+            <div className="fs10 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Possible {a.source || "detachment"} bonus — verify</div>
             <span className="font-semibold" style={{ color: "var(--wh-accent-gold)" }}>{a.name}.</span>{" "}
             <AbilityText text={a.text} accent={accent} />
           </div>
