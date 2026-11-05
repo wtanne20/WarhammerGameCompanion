@@ -24,6 +24,14 @@ export function formatInvuln(v) {
   if (NO_VALUE.has(s)) return null;
   return s.replace(/^(\d+)(\+)?/, "$1+");
 }
+// Movement is stored inconsistently upstream — most rows are "6\"" but the
+// 40kdc-sourced ones are a bare "6" (128 of them). It's display-only (never
+// used in points/wound math), so normalize it at render time: append the inch
+// to a bare number, and leave everything else ("-", "20+\"", "9\"") as-is.
+export function formatMovement(v) {
+  const s = String(v ?? "").trim();
+  return /^\d+$/.test(s) ? `${s}"` : s;
+}
 
 export function formatSyncDate(meta) {
   if (!meta?.lastUpdate) return null;
@@ -246,7 +254,7 @@ export function ProfileStats({ models, accent }) {
             {STAT_ORDER.map((k) => (
               <div key={k} className="text-center" style={{ background: "var(--wh-surface-alt)" }}>
                 <StatHeader k={k} className="fs11 font-semibold uppercase py-0.5" style={{ background: accent, color: "var(--wh-text)" }} />
-                <div className="font-display text-2xl py-1.5 tnum leading-none" style={{ color: "var(--wh-text)" }}>{m[k]}</div>
+                <div className="font-display text-2xl py-1.5 tnum leading-none" style={{ color: "var(--wh-text)" }}>{k === "M" ? formatMovement(m[k]) : m[k]}</div>
               </div>
             ))}
             {showInv && (
@@ -352,7 +360,7 @@ export function UnitTile({ unit, armyUnits = [], selected = false, editing = fal
             <div className="mt-1.5">
               <StatBlock compact accent={accent} columns={formatInvuln(primaryModel.invSv) ? 7 : 6}
                 stats={[
-                  ...STAT_ORDER.map((k) => ({ label: k, value: primaryModel[k] })),
+                  ...STAT_ORDER.map((k) => ({ label: k, value: k === "M" ? formatMovement(primaryModel[k]) : primaryModel[k] })),
                   ...(formatInvuln(primaryModel.invSv) ? [{ label: "Inv", value: formatInvuln(primaryModel.invSv) }] : []),
                 ]} />
             </div>
