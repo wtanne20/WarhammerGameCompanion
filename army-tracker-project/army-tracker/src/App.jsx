@@ -551,7 +551,7 @@ export default function App() {
             )
           )}
 
-          {tab === "rules" && <RulesPage detachments={detachments} stratagems={stratagems} armyFaction={army?.faction} />}
+          {tab === "rules" && <RulesPage detachments={detachments} stratagems={stratagems} armyFaction={army?.faction} catalog={catalog} />}
 
           {tab === "settings" && (
             <Settings meta={meta} onCheckRulesUpdate={handleCheckRulesUpdate}

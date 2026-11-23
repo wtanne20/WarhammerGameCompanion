@@ -7,6 +7,7 @@ import { factionAccent } from "../lib/catalog.js";
 import { AbilityText } from "./shared.jsx";
 import MissionsReference from "./MissionsReference.jsx";
 import { StratagemRow, StratagemFilters, inPhase, inTurn } from "./StratagemsPanel.jsx";
+import KeywordDictionary from "./KeywordDictionary.jsx";
 
 // "How to play" quick reference: the turn order at a glance, then one
 // collapsible card per phase/topic. Each card's one-line summary is often
@@ -178,9 +179,10 @@ const TABS = [
   { id: "detachments", label: "Detachments" },
   { id: "stratagems", label: "Stratagems" },
   { id: "missions", label: "Missions" },
+  { id: "keywords", label: "Keywords" },
 ];
 
-export default function RulesPage({ detachments = [], stratagems, armyFaction }) {
+export default function RulesPage({ detachments = [], stratagems, armyFaction, catalog = [] }) {
   const [tab, setTab] = useState("play");
   const factions = useMemo(() => [...new Set(detachments.filter(isMatchedPlay).map((d) => d.faction))].sort(), [detachments]);
   const [faction, setFaction] = useState(null);
@@ -189,7 +191,7 @@ export default function RulesPage({ detachments = [], stratagems, armyFaction })
   return (
     <div className="pb-24 px-4 pt-6 max-w-xl mx-auto">
       <h1 className="font-display uppercase tracking-wide text-2xl leading-none">Rules</h1>
-      <div className="mt-3 mb-4 grid grid-cols-4 gap-1">
+      <div className="mt-3 mb-4 grid grid-cols-5 gap-1">
         {TABS.map((t) => (
           <button key={t.id} onClick={() => setTab(t.id)} className="fs10 uppercase tracking-wider leading-tight px-1 py-2 active:opacity-70"
             style={{ background: tab === t.id ? "var(--wh-accent)" : "var(--wh-surface)", color: tab === t.id ? "var(--wh-text)" : "var(--wh-text-body)" }}>
@@ -203,6 +205,7 @@ export default function RulesPage({ detachments = [], stratagems, armyFaction })
       )}
       {tab === "stratagems" && <StratagemList stratagems={stratagems} />}
       {tab === "missions" && <MissionsReference />}
+      {tab === "keywords" && <KeywordDictionary catalog={catalog} />}
     </div>
   );
 }

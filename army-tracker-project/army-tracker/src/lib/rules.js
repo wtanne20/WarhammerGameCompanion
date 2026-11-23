@@ -64,7 +64,8 @@ export const KEYWORD_RULES = {
 
 // ---- game terms mentioned in rules prose ---------------------------------
 // Matched case-insensitively in prose ("…if this unit is Battle-shocked…").
-const GAME_TERMS = [
+// Exported so the Rules-tab keyword dictionary can list them.
+export const GAME_TERMS = [
   { match: "battle-?shock(?:ed|s)?(?: tests?| rolls?)?", title: "Battle-shock", text: "In your Command phase, each unit that is already Battle-shocked or at/below half-strength rolls 2D6. Equal to or above its Ld: passed (no longer shocked). Below: Battle-shocked.\n\nWhile Battle-shocked, the unit's OC becomes \"-\" (it can't control objectives), it can't be targeted by stratagems, it can't do actions, and if it Falls Back every model makes a hazard roll. It stays shocked until it passes a later test." },
   { match: "engagement range", title: "Engagement Range", text: "Within 2\" horizontally and 5\" vertically of an enemy model. A unit in Engagement Range is engaged: it can't make Normal moves or Advance, and can only shoot Close-Quarters weapons (Monsters and Vehicles can shoot at -1 to hit)." },
   { match: "critical hits?", title: "Critical Hit", text: "An unmodified Hit roll of 6. Always hits, and triggers abilities like [LETHAL HITS] and [SUSTAINED HITS]." },
