@@ -191,9 +191,12 @@ export default function RulesPage({ detachments = [], stratagems, armyFaction, c
   return (
     <div className="pb-24 px-4 pt-6 max-w-xl mx-auto">
       <h1 className="font-display uppercase tracking-wide text-2xl leading-none">Rules</h1>
-      <div className="mt-3 mb-4 grid grid-cols-5 gap-1">
+      {/* Each tab sizes to its own label (whitespace-nowrap + shrink-0) so
+          no text ever gets clipped or wraps; on narrow screens the row
+          scrolls horizontally instead of squeezing the buttons. */}
+      <div className="mt-3 mb-4 flex gap-1 overflow-x-auto" style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
         {TABS.map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)} className="fs10 uppercase tracking-wider leading-tight px-1 py-2 active:opacity-70"
+          <button key={t.id} onClick={() => setTab(t.id)} className="fs10 uppercase tracking-wider leading-tight px-3 py-2 active:opacity-70 whitespace-nowrap shrink-0"
             style={{ background: tab === t.id ? "var(--wh-accent)" : "var(--wh-surface)", color: tab === t.id ? "var(--wh-text)" : "var(--wh-text-body)" }}>
             {t.label}
           </button>
