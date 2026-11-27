@@ -12,7 +12,7 @@ import { refreshDataFromRemote } from "./lib/remoteData.js";
 import { checkForAppUpdate, downloadAndInstallUpdate } from "./lib/appUpdate.js";
 import { THEME_CSS, loadTheme, saveTheme } from "./lib/theme.js";
 import { shareArmy, importArmy } from "./lib/shareArmy.js";
-import { loadOwned, saveOwned } from "./lib/collection.js";
+import { loadOwned, saveOwned, loadOwnedPhotos, setOwnedPhoto, deleteOwnedPhoto } from "./lib/collection.js";
 import { fetchDetachments, detachmentsForFaction, armyDetachmentIds, combineDetachments, isMatchedPlay } from "./lib/detachments.js";
 import { fetchStratagems } from "./lib/stratagems.js";
 import { fetchIconManifest } from "./lib/icons.js";
@@ -66,6 +66,9 @@ export default function App() {
   const [creatingArmy, setCreatingArmy] = useState(false);
   const [importingArmy, setImportingArmy] = useState(false);
   const [owned, setOwned] = useState(new Map());
+  // Per-owned-unit photos (the "library" image for a unit you own). Applied
+  // to a new list instance when the unit is added; carried forward on clone.
+  const [ownedPhotos, setOwnedPhotos] = useState(new Map());
   const [detachments, setDetachments] = useState([]);
   const [pickingDetachment, setPickingDetachment] = useState(false);
   const [stratagems, setStratagems] = useState(null);
@@ -165,7 +168,10 @@ export default function App() {
         const loaded = await loadArmy(activeId);
         setArmy({ ...loaded, units: refreshUnits(loaded.units, units) });
       }
-      setOwned(await loadOwned());
+      const ownedMap = await loadOwned();
+      setOwned(ownedMap);
+      // Load each owned unit's library photo (cheap: only the ones owned).
+      if (ownedMap.size) setOwnedPhotos(await loadOwnedPhotos([...ownedMap.keys()]));
 
       if (metaData && (await checkForDataUpdate(metaData))) {
         setUpdateNotice(dataUpdatedMessage(refreshedArmyCount));
@@ -202,6 +208,20 @@ export default function App() {
       if (qty > 0) next.set(catalogId, qty);
       else next.delete(catalogId);
       saveOwned(next);
+      return next;
+    });
+  };
+
+  // Set (or clear, when dataUrl is null) the "library" photo for an owned
+  // unit. Existing list instances are left as-is — this only affects units
+  // added from now on and what clones carry forward.
+  const setOwnedUnitPhoto = async (catalogId, dataUrl) => {
+    if (dataUrl) await setOwnedPhoto(catalogId, dataUrl);
+    else await deleteOwnedPhoto(catalogId);
+    setOwnedPhotos((prev) => {
+      const next = new Map(prev);
+      if (dataUrl) next.set(catalogId, dataUrl);
+      else next.delete(catalogId);
       return next;
     });
   };
@@ -322,7 +342,13 @@ export default function App() {
   };
 
   const addUnit = (cat) => {
-    setArmy((a) => ({ ...a, units: [...a.units, { ...cat, instId: uid(), compositionIndex: 0 }] }));
+    const instId = uid();
+    // A unit you own can carry a "library" photo (set in My Units); the new
+    // instance starts with it. Persisted under this instId so it survives a
+    // reload even if the owned-photo is later changed/removed.
+    const photo = ownedPhotos.get(cat.id) || undefined;
+    setArmy((a) => ({ ...a, units: [...a.units, { ...cat, instId, compositionIndex: 0, photo }] }));
+    if (photo) setUnitPhoto(instId, photo);
   };
   const removeUnit = (instId) => {
     setArmy((a) => ({ ...a, units: a.units.filter((u) => u.instId !== instId) }));
@@ -333,7 +359,11 @@ export default function App() {
     setArmy((a) => {
       const index = a.units.findIndex((u) => u.instId === instId);
       if (index === -1) return a;
-      const copy = { ...a.units[index], instId: uid(), leaderInstId: undefined, photo: undefined, woundsRemaining: undefined, customEffects: [] };
+      const src = a.units[index];
+      // Clones keep the photo (unlike wounds/effects, which are per-instance
+      // state). Persist it under the new instId so it survives a reload.
+      const copy = { ...src, instId: uid(), leaderInstId: undefined, woundsRemaining: undefined, customEffects: [] };
+      if (src.photo) setUnitPhoto(copy.instId, src.photo);
       const units = [...a.units];
       units.splice(index + 1, 0, copy);
       return { ...a, units };
@@ -477,7 +507,7 @@ export default function App() {
       ) : (
         <>
           {tab === "my-units" && (
-            <MyUnits catalog={catalog} owned={owned} onSetQty={setOwnedQty} />
+            <MyUnits catalog={catalog} owned={owned} onSetQty={setOwnedQty} photos={ownedPhotos} onSetPhoto={setOwnedUnitPhoto} />
           )}
 
           {tab === "armies" && (

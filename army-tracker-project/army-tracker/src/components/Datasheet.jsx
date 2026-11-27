@@ -1,14 +1,10 @@
-import { useRef, useState } from "react";
-import { ChevronLeft, Trash2, Shield, Swords, Loader2, Camera, Check, SlidersHorizontal } from "lucide-react";
+import { useState } from "react";
+import { ChevronLeft, Trash2, Shield, Swords, Camera, Check, SlidersHorizontal } from "lucide-react";
 import { factionAccent, unitPoints, compositionOption, selectedWeapons } from "../lib/catalog.js";
 import { showRule, coreAbilityRule, lookupRule } from "../lib/rules.js";
-import { compressImage } from "../lib/image.js";
-import { useCloseOnBack } from "../lib/useCloseOnBack.js";
 import { Placeholder, SectionLabel, WeaponTable, ProfileStats, WoundTracker, AbilityText, RuleTerm } from "./shared.jsx";
 import EffectsPanel from "./EffectsPanel.jsx";
-import PhotoSourceSheet from "./PhotoSourceSheet.jsx";
-import ImageSearch from "./ImageSearch.jsx";
-import PasteImageUrlSheet from "./PasteImageUrlSheet.jsx";
+import PhotoFlow from "./PhotoFlow.jsx";
 
 // Core rules (Deep Strike, Leader…) and army rules (Oath of Moment, Combat
 // Doctrines…) repeat on every datasheet of an army and are long, so they're
@@ -38,15 +34,10 @@ export default function Datasheet({
   onSetLeader, onSetEnhancement, onAddCustomEffect, onRemoveCustomEffect, onToggleWeapon,
 }) {
   const accent = factionAccent(unit.faction);
-  const cameraRef = useRef(null);
-  const libraryRef = useRef(null);
-  const [busy, setBusy] = useState(false);
-  // "source" (take/library/online/url chooser), "search" (online image
-  // search), or "url" (paste an image URL) — kept as one piece of state,
-  // with a single history entry for the whole flow, so switching between
-  // sub-views doesn't push/pop history and a back gesture from any of them
-  // always lands straight back on the sheet.
-  const [photoFlow, setPhotoFlow] = useState(null);
+  // The "add/change photo" flow is the shared PhotoFlow component; mounting
+  // it opens the source chooser. onPhoto saves to this instance, then
+  // onDone unmounts the flow (and the photo is already persisted by App).
+  const [photoOpen, setPhotoOpen] = useState(false);
   const abilities = unit.abilities || [];
   const ownAbilities = abilities.filter((a) => !SHARED_ABILITY_TYPES[a.type]);
   const selectedComposition = compositionOption(unit);
@@ -54,23 +45,6 @@ export default function Datasheet({
   const [editingLoadout, setEditingLoadout] = useState(false);
   const hiddenCount = unit.ranged.length + unit.melee.length - weapons.ranged.length - weapons.melee.length;
   const carried = (list) => (name) => list.some((w) => w.name === name);
-
-  useCloseOnBack(!!photoFlow, () => setPhotoFlow(null));
-
-  const pickPhotoFile = async (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    setBusy(true);
-    try { const url = await compressImage(file); await onPhoto(url); } catch { /* bad file */ }
-    setBusy(false);
-    e.target.value = "";
-  };
-
-  const pickOnlineImage = async (dataUrl) => {
-    setPhotoFlow(null);
-    setBusy(true);
-    try { await onPhoto(dataUrl); } finally { setBusy(false); }
-  };
 
   const composition = unit.composition && unit.composition.length > 0 && (
     <div className="px-3 pt-4">
@@ -118,30 +92,16 @@ export default function Datasheet({
         {unit.photo ? (
           <img src={unit.photo} alt={unit.name} className="absolute inset-0 w-full h-full object-cover" />
         ) : (<Placeholder unit={unit} big />)}
-        <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={pickPhotoFile} className="hidden" />
-        <input ref={libraryRef} type="file" accept="image/*" onChange={pickPhotoFile} className="hidden" />
-        <button onClick={() => setPhotoFlow("source")} disabled={busy}
+        <button onClick={() => setPhotoOpen(true)}
           className="absolute flex items-center gap-1.5 font-display uppercase tracking-widest fs11 active:opacity-80"
           style={{ bottom: 12, right: 12, padding: "8px 12px", background: "rgba(15,17,21,0.85)", color: "var(--wh-text)" }}>
-          {busy ? <Loader2 size={14} className="animate-spin" /> : <Camera size={14} />}
+          <Camera size={14} />
           {unit.photo ? "Change photo" : "Add photo"}
         </button>
       </div>
 
-      {photoFlow === "source" && (
-        <PhotoSourceSheet
-          onClose={() => setPhotoFlow(null)}
-          onTakePhoto={() => { setPhotoFlow(null); cameraRef.current && cameraRef.current.click(); }}
-          onChooseLibrary={() => { setPhotoFlow(null); libraryRef.current && libraryRef.current.click(); }}
-          onFindOnline={() => setPhotoFlow("search")}
-          onPasteUrl={() => setPhotoFlow("url")}
-        />
-      )}
-      {photoFlow === "search" && (
-        <ImageSearch unitName={unit.name} onClose={() => setPhotoFlow(null)} onPick={pickOnlineImage} />
-      )}
-      {photoFlow === "url" && (
-        <PasteImageUrlSheet onClose={() => setPhotoFlow(null)} onPick={pickOnlineImage} />
+      {photoOpen && (
+        <PhotoFlow unitName={unit.name} onPick={(dataUrl) => onPhoto(unit.instId, dataUrl)} onDone={() => setPhotoOpen(false)} />
       )}
 
       <div className="px-3 pt-4">

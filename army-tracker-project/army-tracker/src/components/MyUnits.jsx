@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
-import { Search, X, Minus, Plus } from "lucide-react";
+import { Search, X, Minus, Plus, Camera } from "lucide-react";
 import { factionAccent } from "../lib/catalog.js";
+import PhotoFlow from "./PhotoFlow.jsx";
 
 const RESULT_CAP = 100;
 
@@ -22,9 +23,10 @@ function QtyStepper({ qty, accent, onChange }) {
   );
 }
 
-export default function MyUnits({ catalog, owned, onSetQty }) {
+export default function MyUnits({ catalog, owned, onSetQty, photos = new Map(), onSetPhoto }) {
   const [q, setQ] = useState("");
   const query = q.trim().toLowerCase();
+  const [photoUnit, setPhotoUnit] = useState(null); // catalogId whose photo flow is open
 
   const totalOwned = useMemo(() => [...owned.values()].reduce((s, n) => s + n, 0), [owned]);
 
@@ -44,6 +46,7 @@ export default function MyUnits({ catalog, owned, onSetQty }) {
 
   const results = matches.slice(0, RESULT_CAP);
   const list = query ? results : ownedUnits;
+  const photoCatalog = photoUnit ? catalog.find((c) => c.id === photoUnit) : null;
 
   return (
     <div className="pb-24 max-w-xl mx-auto">
@@ -76,11 +79,32 @@ export default function MyUnits({ catalog, owned, onSetQty }) {
         {list.map((c) => {
           const accent = factionAccent(c.faction);
           const qty = owned.get(c.id) || 0;
+          const hasPhoto = !!photos.get(c.id);
           return (
             <div key={c.id} className="w-full flex items-stretch overflow-hidden" style={{ background: "var(--wh-surface)" }}>
               <div style={{ width: 4, background: accent }} />
-              <div className="flex-1 px-4 py-3 flex items-center justify-between gap-2">
-                <div className="min-w-0">
+              <div className="flex-1 px-3 py-2.5 flex items-center gap-3 min-w-0">
+                {/* Photo only makes sense for units you actually own (the
+                    "owned" list); search results show a plain thumbnail slot. */}
+                {!query && (
+                  <div className="relative shrink-0" style={{ width: 44, height: 44 }}>
+                    <button onClick={() => setPhotoUnit(c.id)} title={hasPhoto ? "Change photo" : "Add photo"}
+                      className="absolute inset-0 overflow-hidden active:opacity-80 flex items-center justify-center"
+                      style={{ background: hasPhoto ? "var(--wh-surface-alt)" : accent }}>
+                      {hasPhoto
+                        ? <img src={photos.get(c.id)} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                        : <Camera size={18} style={{ color: "rgba(232,226,212,0.75)" }} />}
+                    </button>
+                    {hasPhoto && (
+                      <button onClick={() => onSetPhoto(c.id, null)} title="Remove photo"
+                        className="absolute -top-1 -right-1 flex items-center justify-center rounded-full active:opacity-60"
+                        style={{ width: 16, height: 16, background: "#3A1414", color: "#E8B4B4", border: "1px solid var(--wh-bg)" }}>
+                        <X size={10} />
+                      </button>
+                    )}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
                   <span className="font-display uppercase tracking-wide text-base">{c.name}</span>
                   <div className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>{c.faction} · {c.role}</div>
                 </div>
@@ -90,6 +114,13 @@ export default function MyUnits({ catalog, owned, onSetQty }) {
           );
         })}
       </div>
+
+      {photoCatalog && (
+        <PhotoFlow
+          unitName={photoCatalog.name}
+          onPick={(dataUrl) => onSetPhoto(photoCatalog.id, dataUrl)}
+          onDone={() => setPhotoUnit(null)} />
+      )}
     </div>
   );
 }
