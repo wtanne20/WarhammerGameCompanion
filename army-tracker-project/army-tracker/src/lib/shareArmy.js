@@ -26,7 +26,7 @@ function slugify(name) {
 // embedding them inline as base64 keeps the export a single self-contained
 // file without needing a separate asset bundle.
 function stripUnit(u) {
-  const { woundsRemaining, customEffects, leaderInstId, ...rest } = u;
+  const { woundsRemaining, customEffects, leaderInstId, supportInstId, ...rest } = u;
   return rest;
 }
 

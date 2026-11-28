@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Loader2, Shield, X } from "lucide-react";
 import { uid } from "./lib/id.js";
-import { fetchCatalog, armyPoints, refreshUnits, selectedWeapons } from "./lib/catalog.js";
+import { fetchCatalog, armyPoints, refreshUnits, selectedWeapons, applyAttach, assignEnhancement } from "./lib/catalog.js";
 import {
   loadArmyIndex, createArmy, deleteArmy, loadArmy, saveArmy,
   setUnitPhoto, deleteUnitPhoto, getActiveArmyId, setActiveArmyId, refreshAllArmies,
@@ -362,7 +362,7 @@ export default function App() {
       const src = a.units[index];
       // Clones keep the photo (unlike wounds/effects, which are per-instance
       // state). Persist it under the new instId so it survives a reload.
-      const copy = { ...src, instId: uid(), leaderInstId: undefined, woundsRemaining: undefined, customEffects: [] };
+      const copy = { ...src, instId: uid(), leaderInstId: undefined, supportInstId: undefined, woundsRemaining: undefined, customEffects: [] };
       if (src.photo) setUnitPhoto(copy.instId, src.photo);
       const units = [...a.units];
       units.splice(index + 1, 0, copy);
@@ -408,24 +408,25 @@ export default function App() {
   const setWounds = (instId, n) => {
     setArmy((a) => ({ ...a, units: a.units.map((u) => (u.instId === instId ? { ...u, woundsRemaining: n } : u)) }));
   };
-  const setLeader = (followerInstId, leaderInstId) => {
-    setArmy((a) => ({
-      ...a,
-      units: a.units.map((u) => {
-        if (u.instId === followerInstId) return { ...u, leaderInstId };
-        if (leaderInstId && u.leaderInstId === leaderInstId) return { ...u, leaderInstId: null };
-        return u;
-      }),
-    }));
+  // Attach/detach a leader OR support to a squad. The slot is chosen by the
+  // attached unit's role (see applyAttach), so a squad can carry BOTH a leader
+  // and a support at once; a character still attaches to only one squad per
+  // role. Named setLeader for back-compat with the onSetLeader prop.
+  const setLeader = (followerInstId, attacherInstId) => {
+    setArmy((a) => ({ ...a, units: applyAttach(a.units, followerInstId, attacherInstId) }));
   };
   const setEnhancement = (instId, enhancementId) => {
     // Points are frozen onto the unit at selection time (rather than looked
     // up fresh from `detachment` every time points are totaled) so army
     // totals stay correct wherever they're computed — including armies.js's
     // saveArmy(), which persists a points snapshot without any detachment
-    // data in scope.
+    // data in scope. An enhancement is carried by one leader, so it's routed
+    // off any other unit (assignEnhancement); clearing sets both id and pts.
     const enhancementPoints = enhancementId ? detachment?.enhancements?.find((e) => e.id === enhancementId)?.points ?? 0 : 0;
-    setArmy((a) => ({ ...a, units: a.units.map((u) => (u.instId === instId ? { ...u, enhancementId, enhancementPoints } : u)) }));
+    setArmy((a) => ({
+      ...a,
+      units: assignEnhancement(a.units, enhancementId, instId).map((u) => (u.instId === instId ? { ...u, enhancementId, enhancementPoints } : u)),
+    }));
   };
   const addCustomEffect = (instId, text) => {
     setArmy((a) => ({
@@ -521,8 +522,8 @@ export default function App() {
               isWide ? (
                 <div className="flex" style={{ height: "calc(100vh - 64px)" }}>
                   <div className="overflow-y-auto shrink-0" style={{ width: 400, borderRight: "1px solid var(--wh-border)" }}>
-                    <Roster army={army} detachments={selectedDetachments} stratagems={stratagems}
-                      onRemoveDetachment={toggleDetachment} onSetBattleSize={setBattleSize}
+                    <Roster army={army} detachments={selectedDetachments} detachment={detachment} stratagems={stratagems}
+                      onRemoveDetachment={toggleDetachment} onSetBattleSize={setBattleSize} onSetEnhancement={setEnhancement}
                       onRename={(name) => setArmy((a) => ({ ...a, name }))}
                       onSelect={setSelectedUnitId}
                       onAdd={() => setAdding(true)}
@@ -558,8 +559,8 @@ export default function App() {
                   </div>
                 </div>
               ) : (
-                <Roster army={army} detachments={selectedDetachments} stratagems={stratagems}
-                      onRemoveDetachment={toggleDetachment} onSetBattleSize={setBattleSize}
+                <Roster army={army} detachments={selectedDetachments} detachment={detachment} stratagems={stratagems}
+                      onRemoveDetachment={toggleDetachment} onSetBattleSize={setBattleSize} onSetEnhancement={setEnhancement}
                   onRename={(name) => setArmy((a) => ({ ...a, name }))}
                   onSelect={setSelectedUnitId}
                   onAdd={() => setAdding(true)}

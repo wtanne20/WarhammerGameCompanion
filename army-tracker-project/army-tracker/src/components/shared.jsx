@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
 import { Link2, Copy, Trash2, X } from "lucide-react";
-import { factionAccent, unitPoints, compositionOption, currentWounds, maxWounds, modelWounds, attachmentRole } from "../lib/catalog.js";
+import { factionAccent, unitPoints, compositionOption, currentWounds, maxWounds, modelWounds } from "../lib/catalog.js";
 import { parseWeaponAbilities } from "../lib/weaponAbilities.js";
 import { showRule, onShowRule, lookupRule, tokenizeRulesText, STAT_RULES } from "../lib/rules.js";
 import { useCloseOnBack } from "../lib/useCloseOnBack.js";
@@ -325,7 +325,17 @@ export function UnitTile({ unit, armyUnits = [], selected = false, editing = fal
   const modelsLeft = models.filter((m) => m.remaining > 0).length;
   const primaryModel = unit.models && unit.models[0];
   const leader = unit.leaderInstId ? armyUnits.find((u) => u.instId === unit.leaderInstId) : null;
+  const support = unit.supportInstId ? armyUnits.find((u) => u.instId === unit.supportInstId) : null;
   const leading = armyUnits.find((u) => u.leaderInstId === unit.instId);
+  const supporting = armyUnits.find((u) => u.supportInstId === unit.instId);
+  // A squad can show up to two attachments (a leader AND a support); a
+  // character shows what it's attached to. Each line is labeled by role.
+  const attachments = [
+    leader && { verb: "Led by", name: leader.name },
+    support && { verb: "Supported by", name: support.name },
+    leading && { verb: "Leading", name: leading.name },
+    supporting && { verb: "Supporting", name: supporting.name },
+  ].filter(Boolean);
 
   return (
     <div className="w-full flex items-stretch overflow-hidden" style={{ background: selected ? "var(--wh-surface-selected)" : "var(--wh-surface)" }}>
@@ -345,12 +355,12 @@ export function UnitTile({ unit, armyUnits = [], selected = false, editing = fal
               <div className="fs9 uppercase tracking-widest mt-0.5" style={{ color: "var(--wh-muted)" }}>
                 {unit.faction}{opt ? ` · ${opt.description}` : ""}
               </div>
-              {(leader || leading) && (
-                <div className="flex items-center gap-1 fs9 uppercase tracking-widest mt-0.5" style={{ color: "var(--wh-accent-gold)" }}>
-                  <Link2 size={10} />
-                  {leader
-                    ? `${attachmentRole(leader) === "support" ? "Supported by" : "Led by"} ${leader.name}`
-                    : `${attachmentRole(unit) === "support" ? "Supporting" : "Leading"} ${leading.name}`}
+              {attachments.length > 0 && (
+                <div className="flex items-center gap-1 fs9 uppercase tracking-widest mt-0.5 flex-wrap" style={{ color: "var(--wh-accent-gold)" }}>
+                  <Link2 size={10} className="shrink-0" />
+                  {attachments.map((a) => (
+                    <span key={a.name}>{a.verb} {a.name}</span>
+                  ))}
                 </div>
               )}
             </div>

@@ -11,6 +11,8 @@ import {
   refreshUnits,
   isSupportUnit,
   attachmentRole,
+  applyAttach,
+  assignEnhancement,
 } from "./catalog.js";
 
 // ---------------------------------------------------------------------------
@@ -261,5 +263,79 @@ describe("attachment role (leader vs support)", () => {
   it("defaults to lead when there is no Support ability", () => {
     expect(attachmentRole({ abilities: [] })).toBe("lead");
     expect(attachmentRole({})).toBe("lead");
+  });
+});
+
+describe("applyAttach (leader + support on the same squad)", () => {
+  const squad = { instId: "squad", id: "bladeguard-veteran-squad" };
+  const leader = { instId: "adrax", id: "adrax-agatone", abilities: [{ name: "Leader", type: "Core" }] };
+  const support = { instId: "bgancient", id: "bladeguard-ancient", abilities: [{ name: "Support", type: "Core" }] };
+
+  it("routes a leader to the leader slot and a support to the support slot", () => {
+    let units = [squad, leader, support];
+    units = applyAttach(units, "squad", "adrax");
+    expect(units.find((u) => u.instId === "squad").leaderInstId).toBe("adrax");
+    units = applyAttach(units, "squad", "bgancient");
+    const s = units.find((u) => u.instId === "squad");
+    expect(s.leaderInstId).toBe("adrax"); // leader untouched
+    expect(s.supportInstId).toBe("bgancient"); // support in its own slot
+  });
+
+  it("lets a squad carry BOTH a leader and a support at once", () => {
+    let units = [squad, leader, support];
+    units = applyAttach(units, "squad", "adrax");
+    units = applyAttach(units, "squad", "bgancient");
+    const s = units.find((u) => u.instId === "squad");
+    expect(s.leaderInstId).toBe("adrax");
+    expect(s.supportInstId).toBe("bgancient");
+  });
+
+  it("toggles off when the same unit is attached to the same squad again", () => {
+    let units = [squad, leader];
+    units = applyAttach(units, "squad", "adrax");
+    expect(units.find((u) => u.instId === "squad").leaderInstId).toBe("adrax");
+    units = applyAttach(units, "squad", "adrax"); // tap again -> detach
+    expect(units.find((u) => u.instId === "squad").leaderInstId).toBeFalsy();
+  });
+
+  it("moves a character to only one squad per role (clears the other)", () => {
+    const squadB = { instId: "squadB", id: "other-squad" };
+    let units = [squad, squadB, leader];
+    units = applyAttach(units, "squad", "adrax");
+    expect(units.find((u) => u.instId === "squad").leaderInstId).toBe("adrax");
+    units = applyAttach(units, "squadB", "adrax"); // now leads squadB instead
+    expect(units.find((u) => u.instId === "squad").leaderInstId).toBeFalsy();
+    expect(units.find((u) => u.instId === "squadB").leaderInstId).toBe("adrax");
+  });
+
+  it("does not mix roles: a support stays out of the leader slot and vice versa", () => {
+    let units = [squad, leader, support];
+    units = applyAttach(units, "squad", "bgancient"); // attach support first
+    const s = units.find((u) => u.instId === "squad");
+    expect(s.supportInstId).toBe("bgancient");
+    expect(s.leaderInstId).toBeFalsy();
+  });
+});
+
+describe("assignEnhancement (one leader carries an enhancement)", () => {
+  const cap = { instId: "captain", id: "captain" };
+  const other = { instId: "other", id: "other-char" };
+  const squad = { instId: "squad", id: "squad" };
+
+  it("assigns an enhancement to the chosen character", () => {
+    const units = assignEnhancement([cap, other, squad], "enh-1", "captain");
+    expect(units.find((u) => u.instId === "captain").enhancementId).toBe("enh-1");
+  });
+
+  it("moves an enhancement off any other unit that had it", () => {
+    let units = [cap, other, squad].map((u) => ({ ...u, enhancementId: "enh-1" }));
+    units = assignEnhancement(units, "enh-1", "captain"); // now only captain keeps it
+    expect(units.find((u) => u.instId === "captain").enhancementId).toBe("enh-1");
+    expect(units.find((u) => u.instId === "other").enhancementId).toBeFalsy();
+  });
+
+  it("is a no-op when clearing (null id)", () => {
+    const units = [cap, other];
+    expect(assignEnhancement(units, null, "captain")).toEqual(units);
   });
 });

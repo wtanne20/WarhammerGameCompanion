@@ -25,15 +25,29 @@ export default function EffectsPanel({
   const [note, setNote] = useState("");
 
   const isCharacter = unit.role === "Characters";
+  // A squad can carry BOTH a leader and a support (e.g. led by Adrax Agatone
+  // AND supported by a Bladeguard Ancient) — two separate slots.
   const leader = unit.leaderInstId ? armyUnits.find((u) => u.instId === unit.leaderInstId) : null;
-  const leaderAbilities = leader ? (leader.abilities || []).filter((a) => a.type === "Datasheet") : [];
+  const support = unit.supportInstId ? armyUnits.find((u) => u.instId === unit.supportInstId) : null;
+  const attachedAbilities = (att) => (att ? (att.abilities || []).filter((a) => a.type === "Datasheet") : []);
 
-  const currentlyLeading = isCharacter ? armyUnits.find((u) => u.leaderInstId === unit.instId) : null;
-  const followers = isCharacter
+  // For a character: the squads it's attached to, tagged with the role it
+  // plays in each (it could lead one squad and support another).
+  const attachedSquads = isCharacter
+    ? armyUnits
+        .filter((u) => u.instId !== unit.instId && (u.leaderInstId === unit.instId || u.supportInstId === unit.instId))
+        .map((u) => ({ squad: u, role: u.supportInstId === unit.instId ? "support" : "lead" }))
+    : [];
+  // Squads this character can attach to (as leader or support).
+  const eligibleSquads = isCharacter
     ? armyUnits.filter((u) => u.instId !== unit.instId && (unit.canLead || []).includes(u.id))
     : [];
+  // For a squad: the leaders / supports it can attach, split by role.
   const eligibleLeaders = !leader
-    ? armyUnits.filter((u) => u.instId !== unit.instId && (unit.canBeLedBy || []).includes(u.id))
+    ? armyUnits.filter((u) => u.instId !== unit.instId && (unit.canBeLedBy || []).includes(u.id) && attachmentRole(u) === "lead")
+    : [];
+  const eligibleSupports = !support
+    ? armyUnits.filter((u) => u.instId !== unit.instId && (unit.canBeLedBy || []).includes(u.id) && attachmentRole(u) === "support")
     : [];
 
   const matchedAbilities = detachment ? detachment.abilities.filter((a) => unitMatchesAbility(unit, a)) : [];
@@ -51,15 +65,16 @@ export default function EffectsPanel({
     <section className="px-3 pt-5">
       <SectionLabel accent={accent}>Active Effects</SectionLabel>
       <div className="mt-2 space-y-2 pl-2" style={{ borderLeft: `3px solid ${accent}` }}>
+        {/* A squad's attachments — a leader and/or a support, each removable. */}
         {leader && (
           <div className="px-3 py-2" style={{ background: "var(--wh-surface)" }}>
             <div className="flex items-center justify-between gap-2">
-              <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>{attachmentRole(leader) === "support" ? "Supported by" : "Led by"} {leader.name}</span>
-              <button onClick={() => onSetLeader(unit.instId, null)} className="p-1 active:opacity-60 shrink-0" style={{ color: "var(--wh-muted)" }}><Unlink size={14} /></button>
+              <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Led by {leader.name}</span>
+              <button onClick={() => onSetLeader(unit.instId, leader.instId)} className="p-1 active:opacity-60 shrink-0" style={{ color: "var(--wh-muted)" }} title="Detach"><Unlink size={14} /></button>
             </div>
-            {leaderAbilities.length === 0 ? (
+            {attachedAbilities(leader).length === 0 ? (
               <p className="fs11 mt-1" style={{ color: "var(--wh-dim)" }}>Check {leader.name}'s own sheet for anything that applies while attached.</p>
-            ) : leaderAbilities.map((ab, i) => (
+            ) : attachedAbilities(leader).map((ab, i) => (
               <div key={i} className="mt-2">
                 <span className="font-semibold" style={{ color: "var(--wh-accent-gold)" }}>{ab.name}.</span>{" "}
                 <AbilityText text={ab.text} accent={accent} />
@@ -68,24 +83,44 @@ export default function EffectsPanel({
           </div>
         )}
 
-        {!editing && currentlyLeading && (
+        {support && (
           <div className="px-3 py-2" style={{ background: "var(--wh-surface)" }}>
-            <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>{attachmentRole(unit) === "support" ? "Supporting" : "Leading"} {currentlyLeading.name}</span>
+            <div className="flex items-center justify-between gap-2">
+              <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Supported by {support.name}</span>
+              <button onClick={() => onSetLeader(unit.instId, support.instId)} className="p-1 active:opacity-60 shrink-0" style={{ color: "var(--wh-muted)" }} title="Detach"><Unlink size={14} /></button>
+            </div>
+            {attachedAbilities(support).length === 0 ? (
+              <p className="fs11 mt-1" style={{ color: "var(--wh-dim)" }}>Check {support.name}'s own sheet for anything that applies while attached.</p>
+            ) : attachedAbilities(support).map((ab, i) => (
+              <div key={i} className="mt-2">
+                <span className="font-semibold" style={{ color: "var(--wh-accent-gold)" }}>{ab.name}.</span>{" "}
+                <AbilityText text={ab.text} accent={accent} />
+              </div>
+            ))}
           </div>
         )}
 
-        {editing && isCharacter && followers.length > 0 && (
+        {/* A character's attachments — the squad(s) it leads and/or supports. */}
+        {!editing && attachedSquads.length > 0 && (
+          <div className="px-3 py-2 space-y-1" style={{ background: "var(--wh-surface)" }}>
+            {attachedSquads.map(({ squad, role }) => (
+              <span key={squad.instId} className="fs11 uppercase tracking-widest block" style={{ color: "var(--wh-muted)" }}>
+                {role === "support" ? "Supporting" : "Leading"} {squad.name}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {editing && isCharacter && eligibleSquads.length > 0 && (
           <div className="px-3 py-2" style={{ background: "var(--wh-surface)" }}>
-            <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>{attachmentRole(unit) === "support" ? "Support a unit" : "Lead a unit"}</span>
+            <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>{attachmentRole(unit) === "support" ? "Attach to a unit (support)" : "Attach to a unit (lead)"}</span>
             <div className="flex flex-wrap gap-2 mt-2">
-              {followers.map((f) => {
-                const active = f.leaderInstId === unit.instId;
-                const otherLeader = !active && f.leaderInstId ? armyUnits.find((u) => u.instId === f.leaderInstId) : null;
+              {eligibleSquads.map((f) => {
+                const attached = attachedSquads.some((x) => x.squad.instId === f.instId);
                 return (
-                  <Chip key={f.instId} active={active} accent={accent}
-                    onClick={() => onSetLeader(f.instId, active ? null : unit.instId)}>
+                  <Chip key={f.instId} active={attached} accent={accent}
+                    onClick={() => onSetLeader(f.instId, unit.instId)}>
                     <div className="flex items-center gap-1.5 font-display text-sm"><Link2 size={12} />{f.name}</div>
-                    {otherLeader && <div className="fs9 mt-0.5" style={{ color: "var(--wh-muted)" }}>{attachmentRole(otherLeader) === "support" ? "Supported by" : "Led by"} {otherLeader.name}</div>}
                   </Chip>
                 );
               })}
@@ -93,11 +128,24 @@ export default function EffectsPanel({
           </div>
         )}
 
-        {editing && !leader && eligibleLeaders.length > 0 && (
+        {editing && eligibleLeaders.length > 0 && (
           <div className="px-3 py-2" style={{ background: "var(--wh-surface)" }}>
-            <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Attach a leader or support</span>
+            <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Attach a leader</span>
             <div className="flex flex-wrap gap-2 mt-2">
               {eligibleLeaders.map((l) => (
+                <Chip key={l.instId} accent={accent} onClick={() => onSetLeader(unit.instId, l.instId)}>
+                  <div className="flex items-center gap-1.5 font-display text-sm"><Link2 size={12} />{l.name}</div>
+                </Chip>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {editing && eligibleSupports.length > 0 && (
+          <div className="px-3 py-2" style={{ background: "var(--wh-surface)" }}>
+            <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Attach a support</span>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {eligibleSupports.map((l) => (
                 <Chip key={l.instId} accent={accent} onClick={() => onSetLeader(unit.instId, l.instId)}>
                   <div className="flex items-center gap-1.5 font-display text-sm"><Link2 size={12} />{l.name}</div>
                 </Chip>

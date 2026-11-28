@@ -72,6 +72,51 @@ export function attachmentRole(unit) {
   return isSupportUnit(unit) ? "support" : "lead";
 }
 
+// A squad can carry BOTH a leader and a support (e.g. a Bladeguard Veteran
+// Squad led by Adrax Agatone AND supported by a Bladeguard Ancient). They
+// live in two separate slots: leaderInstId and supportInstId. The slot is
+// chosen by the attached unit's role, so the caller just says "attach X to Y."
+export const LEADER_SLOT = "leaderInstId";
+export const SUPPORT_SLOT = "supportInstId";
+
+export function slotForRole(role) {
+  return role === "support" ? SUPPORT_SLOT : LEADER_SLOT;
+}
+
+// Pure: returns a new units array with `attacherInstId` attached to
+// `followerInstId` (or detached, if it was already attached there). The slot
+// is picked from the attacher's role, and the attacher is cleared from any
+// OTHER squad in the same slot — a character attaches to at most one squad.
+export function applyAttach(units, followerInstId, attacherInstId) {
+  const attacher = units.find((u) => u.instId === attacherInstId);
+  if (!attacher) return units;
+  const slot = slotForRole(attachmentRole(attacher));
+  const follower = units.find((u) => u.instId === followerInstId);
+  if (!follower) return units;
+  const detaching = follower[slot] === attacherInstId;
+  return units.map((u) => {
+    if (u.instId === followerInstId) {
+      return { ...u, [slot]: detaching ? null : attacherInstId };
+    }
+    // A character attaches to one squad per role — clear it elsewhere.
+    if (u[slot] === attacherInstId) return { ...u, [slot]: null };
+    return u;
+  });
+}
+
+// Pure: assign `enhancementId` to `characterInstId` (or clear it when
+// characterInstId is null). An enhancement is carried by one leader, so it's
+// removed from any other unit. Points are set by the caller (it knows the
+// detachment data); this just routes which unit holds the id.
+export function assignEnhancement(units, enhancementId, characterInstId) {
+  if (!enhancementId) return units;
+  return units.map((u) => {
+    if (u.instId === characterInstId) return { ...u, enhancementId };
+    if (u.enhancementId === enhancementId) return { ...u, enhancementId: null, enhancementPoints: 0 };
+    return u;
+  });
+}
+
 // The models in this unit instance, each with its own Wounds, in datasheet
 // order (sergeant/leader first). Built from compositionText ("1 Intercessor
 // Sergeant model, 4-9 Intercessor models") matched against the model
@@ -147,7 +192,7 @@ export function currentWounds(unit) {
 // (updated stats/points/rules included) while keeping everything that's
 // actually about *this instance*, not the datasheet.
 const INSTANCE_FIELDS = [
-  "instId", "compositionIndex", "photo", "leaderInstId", "enhancementId", "enhancementPoints",
+  "instId", "compositionIndex", "photo", "leaderInstId", "supportInstId", "enhancementId", "enhancementPoints",
   "woundsRemaining", "customEffects", "weaponSelection",
 ];
 
@@ -170,7 +215,22 @@ function normalizeUnitName(s) {
 export function refreshUnits(units, catalog) {
   const byId = new Map(catalog.map((c) => [c.id, c]));
   const byName = new Map(catalog.map((c) => [normalizeUnitName(c.name), c]));
-  return units.map((u) => {
+  // Migration: old armies stored every attachment in leaderInstId, so a squad
+  // could hold only one. Now a squad can carry BOTH a leader and a support —
+  // move any attachment whose attached unit is a support unit over to
+  // supportInstId (idempotent; a support already there is left alone).
+  const instIdToCatalogId = new Map(units.map((u) => [u.instId, u.id]));
+  const catalogRole = new Map(catalog.map((c) => [c.id, attachmentRole(c)]));
+  const migrated = units.map((u) => {
+    if (u.leaderInstId) {
+      const attachedCatalogId = instIdToCatalogId.get(u.leaderInstId);
+      if (attachedCatalogId && catalogRole.get(attachedCatalogId) === "support") {
+        return { ...u, leaderInstId: undefined, supportInstId: u.leaderInstId };
+      }
+    }
+    return u;
+  });
+  return migrated.map((u) => {
     const fresh = byId.get(u.id) || byName.get(normalizeUnitName(u.name));
     if (!fresh) return u; // genuinely gone upstream — keep the stale copy rather than drop it silently
     const instanceData = {};
