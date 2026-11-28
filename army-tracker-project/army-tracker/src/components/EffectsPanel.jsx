@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Link2, Unlink, X, Plus, AlertTriangle } from "lucide-react";
+import { Link2, Unlink, X, Plus, AlertTriangle, HelpCircle } from "lucide-react";
 import { unitMatchesAbility } from "../lib/detachments.js";
 import { attachmentRole } from "../lib/catalog.js";
+import { showRule } from "../lib/rules.js";
 import { SectionLabel, AbilityText } from "./shared.jsx";
 
 function Chip({ active, accent, onClick, children }) {
@@ -158,15 +159,22 @@ export default function EffectsPanel({
           <div className="px-3 py-2" style={{ background: "var(--wh-surface)" }}>
             <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Enhancement</span>
             {editing && (
-              <div className="flex flex-wrap gap-2 mt-2">
+              <div className="flex flex-wrap gap-2 mt-2 items-center">
                 <Chip active={!unit.enhancementId} accent={accent} onClick={() => onSetEnhancement(unit.instId, null)}>
                   <span className="font-display text-sm">None</span>
                 </Chip>
                 {detachment.enhancements.map((e) => (
-                  <Chip key={e.id} active={unit.enhancementId === e.id} accent={accent} onClick={() => onSetEnhancement(unit.instId, e.id)}>
-                    <div className="font-display text-sm">{e.name}</div>
-                    <div className="fs10 tnum mt-0.5" style={{ color: unit.enhancementId === e.id ? "rgba(232,226,212,0.8)" : "var(--wh-muted)" }}>{e.points} pts{e.source ? ` · ${e.source}` : ""}</div>
-                  </Chip>
+                  <div key={e.id} className="flex items-center gap-1">
+                    <Chip active={unit.enhancementId === e.id} accent={accent} onClick={() => onSetEnhancement(unit.instId, e.id)}>
+                      <div className="font-display text-sm">{e.name}</div>
+                      <div className="fs10 tnum mt-0.5" style={{ color: unit.enhancementId === e.id ? "rgba(232,226,212,0.8)" : "var(--wh-muted)" }}>{e.points} pts{e.source ? ` · ${e.source}` : ""}</div>
+                    </Chip>
+                    {(e.text || e.legend) && (
+                      <button onClick={() => showRule({ title: e.name, text: e.text || e.legend })} className="p-1 active:opacity-60" style={{ color: "var(--wh-muted)" }} aria-label={`What does ${e.name} do?`}>
+                        <HelpCircle size={15} />
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             )}

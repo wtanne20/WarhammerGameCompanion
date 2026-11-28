@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Loader2, Shield, X } from "lucide-react";
 import { uid } from "./lib/id.js";
-import { fetchCatalog, armyPoints, refreshUnits, selectedWeapons, applyAttach, assignEnhancement } from "./lib/catalog.js";
+import { fetchCatalog, armyPoints, refreshUnits, selectedWeapons, applyAttach, assignEnhancement, isEnhancementSelected, armyEnhancementPoints } from "./lib/catalog.js";
 import {
   loadArmyIndex, createArmy, deleteArmy, loadArmy, saveArmy,
   setUnitPhoto, deleteUnitPhoto, getActiveArmyId, setActiveArmyId, refreshAllArmies,
@@ -428,6 +428,20 @@ export default function App() {
       units: assignEnhancement(a.units, enhancementId, instId).map((u) => (u.instId === instId ? { ...u, enhancementId, enhancementPoints } : u)),
     }));
   };
+  // Army-level enhancement selection (the checkboxes in the detachment card).
+  // Toggles an {id, points} entry on army.selectedEnhancements. Points are
+  // frozen at selection time so the total is self-contained (see
+  // armyEnhancementPoints); it's never double-counted with a unit assignment.
+  const toggleEnhancement = (enhancementId) => {
+    setArmy((a) => {
+      const cur = a.selectedEnhancements || [];
+      if (cur.some((s) => s.id === enhancementId)) {
+        return { ...a, selectedEnhancements: cur.filter((s) => s.id !== enhancementId) };
+      }
+      const points = detachment?.enhancements?.find((e) => e.id === enhancementId)?.points ?? 0;
+      return { ...a, selectedEnhancements: [...cur, { id: enhancementId, points }] };
+    });
+  };
   const addCustomEffect = (instId, text) => {
     setArmy((a) => ({
       ...a,
@@ -522,8 +536,8 @@ export default function App() {
               isWide ? (
                 <div className="flex" style={{ height: "calc(100vh - 64px)" }}>
                   <div className="overflow-y-auto shrink-0" style={{ width: 400, borderRight: "1px solid var(--wh-border)" }}>
-                    <Roster army={army} detachments={selectedDetachments} detachment={detachment} stratagems={stratagems}
-                      onRemoveDetachment={toggleDetachment} onSetBattleSize={setBattleSize} onSetEnhancement={setEnhancement}
+                    <Roster army={army} detachments={selectedDetachments} stratagems={stratagems}
+                      onRemoveDetachment={toggleDetachment} onSetBattleSize={setBattleSize} onToggleEnhancement={toggleEnhancement}
                       onRename={(name) => setArmy((a) => ({ ...a, name }))}
                       onSelect={setSelectedUnitId}
                       onAdd={() => setAdding(true)}
@@ -559,8 +573,8 @@ export default function App() {
                   </div>
                 </div>
               ) : (
-                <Roster army={army} detachments={selectedDetachments} detachment={detachment} stratagems={stratagems}
-                      onRemoveDetachment={toggleDetachment} onSetBattleSize={setBattleSize} onSetEnhancement={setEnhancement}
+                <Roster army={army} detachments={selectedDetachments} stratagems={stratagems}
+                      onRemoveDetachment={toggleDetachment} onSetBattleSize={setBattleSize} onToggleEnhancement={toggleEnhancement}
                   onRename={(name) => setArmy((a) => ({ ...a, name }))}
                   onSelect={setSelectedUnitId}
                   onAdd={() => setAdding(true)}

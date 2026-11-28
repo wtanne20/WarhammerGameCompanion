@@ -13,6 +13,8 @@ import {
   attachmentRole,
   applyAttach,
   assignEnhancement,
+  isEnhancementSelected,
+  armyEnhancementPoints,
 } from "./catalog.js";
 
 // ---------------------------------------------------------------------------
@@ -337,5 +339,33 @@ describe("assignEnhancement (one leader carries an enhancement)", () => {
   it("is a no-op when clearing (null id)", () => {
     const units = [cap, other];
     expect(assignEnhancement(units, null, "captain")).toEqual(units);
+  });
+});
+
+describe("army-level enhancement points (checkboxes in the detachment card)", () => {
+  it("adds checked enhancements to the total", () => {
+    const army = { units: [], selectedEnhancements: [{ id: "e1", points: 15 }, { id: "e2", points: 25 }] };
+    expect(armyEnhancementPoints(army)).toBe(40);
+  });
+
+  it("does NOT double-count an enhancement also assigned to a unit", () => {
+    const army = {
+      units: [{ instId: "c", enhancementId: "e1", enhancementPoints: 15 }],
+      selectedEnhancements: [{ id: "e1", points: 15 }, { id: "e2", points: 25 }],
+    };
+    // e1 is on a unit (already in armyPoints) -> only e2 counts here.
+    expect(armyEnhancementPoints(army)).toBe(25);
+  });
+
+  it("is zero when nothing is checked", () => {
+    expect(armyEnhancementPoints({ units: [], selectedEnhancements: [] })).toBe(0);
+    expect(armyEnhancementPoints({ units: [] })).toBe(0);
+  });
+
+  it("isEnhancementSelected reflects either path", () => {
+    const army = { units: [{ enhancementId: "u1" }], selectedEnhancements: [{ id: "a1", points: 5 }] };
+    expect(isEnhancementSelected(army, "u1")).toBe(true); // assigned to a unit
+    expect(isEnhancementSelected(army, "a1")).toBe(true); // checked army-level
+    expect(isEnhancementSelected(army, "none")).toBe(false);
   });
 });

@@ -60,6 +60,27 @@ export function armyPoints(army) {
   return army.units.reduce((s, u) => s + unitPoints(u), 0);
 }
 
+// Enhancement selection has two paths that must never double-count:
+//   • assigned to a character (unit.enhancementId) -> counted via unitPoints
+//     inside armyPoints; OR
+//   • checked as an army-level enhancement (army.selectedEnhancements, an
+//     array of {id, points}) -> counted here, added on top of armyPoints.
+// The points are frozen onto the army at selection time (like a unit's
+// enhancementPoints) so the total is self-contained — saveArmy's index
+// snapshot and armyPoints work without any detachment data in scope.
+export function isEnhancementSelected(army, id) {
+  if (!id || !army) return false;
+  if ((army.selectedEnhancements || []).some((s) => s.id === id)) return true;
+  return (army.units || []).some((u) => u.enhancementId === id);
+}
+
+export function armyEnhancementPoints(army) {
+  const selected = army?.selectedEnhancements || [];
+  if (!selected.length) return 0;
+  const assigned = new Set((army.units || []).map((u) => u.enhancementId).filter(Boolean));
+  return selected.filter((s) => !assigned.has(s.id)).reduce((sum, s) => sum + (s.points || 0), 0);
+}
+
 // A character's attachment role, from its [Core] ability: "Support" means it
 // supports a squad (Bladeguard Ancient, Apothecary…), "Leader" means it leads
 // one (Captain, Marshal…). The two are mutually exclusive in the data. Used

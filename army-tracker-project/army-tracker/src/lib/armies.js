@@ -16,7 +16,7 @@
 // gracefully (neutral icon, unfiltered unit search).
 
 import { uid } from "./id.js";
-import { armyPoints, refreshUnits } from "./catalog.js";
+import { armyPoints, armyEnhancementPoints, refreshUnits } from "./catalog.js";
 
 const INDEX_KEY = "armies:index";
 const ACTIVE_KEY = "active-army";
@@ -92,7 +92,7 @@ export async function saveArmy(army) {
 
   const index = await loadArmyIndex();
   const entry = index.find((a) => a.id === army.id);
-  const points = armyPoints(army);
+  const points = armyPoints(army) + armyEnhancementPoints(army);
   if (entry && (entry.name !== army.name || entry.points !== points || entry.unitCount !== army.units.length || entry.icon !== army.icon)) {
     entry.name = army.name;
     entry.points = points;

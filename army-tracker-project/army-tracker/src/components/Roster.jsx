@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Plus, RotateCcw, ChevronRight, ChevronDown, ImagePlus, X, Sparkles } from "lucide-react";
+import { Plus, RotateCcw, ChevronRight, ChevronDown, ImagePlus, X, HelpCircle } from "lucide-react";
 import { BATTLE_SIZES, battleSize, dpUsed } from "../lib/detachments.js";
-import { armyPoints, factionAccent } from "../lib/catalog.js";
+import { armyPoints, factionAccent, isEnhancementSelected, armyEnhancementPoints } from "../lib/catalog.js";
+import { showRule } from "../lib/rules.js";
 import { isLibraryIcon } from "../lib/icons.js";
 import { withBase } from "../lib/paths.js";
 import { UnitTile, SectionLabel, AbilityText } from "./shared.jsx";
@@ -55,14 +56,21 @@ function groupByRole(units) {
   return [...known, ...rest].map((category) => [category, groups.get(category).sort((a, b) => a.name.localeCompare(b.name))]);
 }
 
-function DetachmentCard({ detachment, playing, onRemove, accent }) {
+function DetachmentCard({ detachment, playing, onRemove, accent, army, onToggleEnhancement }) {
   const [expanded, setExpanded] = useState(false);
+  const enhancements = detachment.enhancements || [];
+  const selectedCount = enhancements.filter((e) => isEnhancementSelected(army, e.id)).length;
   return (
     <div style={{ background: "var(--wh-surface)" }}>
       <div className="w-full flex items-center gap-2 pr-2">
         <button onClick={() => setExpanded((v) => !v)} className="min-w-0 flex-1 flex items-center gap-3 text-left px-4 py-3 active:opacity-80">
           <span className="font-display text-base tnum shrink-0 px-1.5" style={{ color: "var(--wh-accent-gold)", border: "1px solid var(--wh-border)" }}>{detachment.dp ?? "?"}</span>
           <span className="font-display uppercase tracking-wide text-base truncate">{detachment.name}</span>
+          {enhancements.length > 0 && (
+            <span className="fs9 uppercase tracking-widest shrink-0" style={{ color: selectedCount ? "var(--wh-accent-gold)" : "var(--wh-muted)" }}>
+              +{selectedCount}/{enhancements.length}
+            </span>
+          )}
           <span className="ml-auto shrink-0" style={{ color: "var(--wh-muted)" }}>{expanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}</span>
         </button>
         {!playing && (
@@ -79,6 +87,40 @@ function DetachmentCard({ detachment, playing, onRemove, accent }) {
               <div className="text-sm mt-0.5"><AbilityText text={a.text} accent={accent} /></div>
             </div>
           ))}
+
+          {enhancements.length > 0 && (
+            <div className="pt-2" style={{ borderTop: "1px solid var(--wh-border)" }}>
+              <div className="fs10 uppercase tracking-widest mb-2" style={{ color: "var(--wh-muted)" }}>Enhancements</div>
+              <div className="flex flex-wrap gap-2 items-center">
+                {enhancements.map((e) => {
+                  const selected = isEnhancementSelected(army, e.id);
+                  const chipStyle = { background: selected ? accent : "var(--wh-surface-alt)", color: selected ? "var(--wh-text)" : "var(--wh-text-body)" };
+                  const chipInner = (
+                    <>
+                      <div className="font-display text-sm">{e.name}</div>
+                      <div className="fs10 tnum mt-0.5" style={{ color: selected ? "rgba(232,226,212,0.8)" : "var(--wh-muted)" }}>{e.points} pts</div>
+                    </>
+                  );
+                  return (
+                    <div key={e.id} className="flex items-center gap-1">
+                      {!playing ? (
+                        <button onClick={() => onToggleEnhancement(e.id)} className="text-left px-3 py-2 active:opacity-80" style={chipStyle}>
+                          {chipInner}
+                        </button>
+                      ) : (
+                        <span className="text-left px-3 py-2" style={{ ...chipStyle, opacity: selected ? 1 : 0.5 }}>{chipInner}</span>
+                      )}
+                      {(e.text || e.legend) && (
+                        <button onClick={() => showRule({ title: e.name, text: e.text || e.legend })} className="p-1 active:opacity-60" style={{ color: "var(--wh-muted)" }} aria-label={`What does ${e.name} do?`}>
+                          <HelpCircle size={15} />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -87,7 +129,7 @@ function DetachmentCard({ detachment, playing, onRemove, accent }) {
 
 // Battle size sets the detachment-point budget (lib/detachments.js); the
 // army's detachments are listed under it with their DP cost.
-function DetachmentsSection({ army, detachments, playing, onOpenDetachmentPicker, onRemoveDetachment, onSetBattleSize, accent }) {
+function DetachmentsSection({ army, detachments, playing, onOpenDetachmentPicker, onRemoveDetachment, onSetBattleSize, onToggleEnhancement, accent }) {
   const size = battleSize(army);
   const used = dpUsed(detachments);
   const canAdd = detachments.length === 0 || used < size.dp;
@@ -111,7 +153,7 @@ function DetachmentsSection({ army, detachments, playing, onOpenDetachmentPicker
         )}
       </div>
       {detachments.map((d) => (
-        <DetachmentCard key={d.id} detachment={d} playing={playing} onRemove={onRemoveDetachment} accent={accent} />
+        <DetachmentCard key={d.id} detachment={d} playing={playing} onRemove={onRemoveDetachment} accent={accent} army={army} onToggleEnhancement={onToggleEnhancement} />
       ))}
       {!playing && canAdd && (
         <button onClick={onOpenDetachmentPicker} className="w-full flex items-center justify-between px-4 py-3 active:opacity-80" style={{ background: "var(--wh-surface)" }}>
@@ -120,81 +162,6 @@ function DetachmentsSection({ army, detachments, playing, onOpenDetachmentPicker
           </span>
           <ChevronRight size={18} style={{ color: "var(--wh-muted)" }} />
         </button>
-      )}
-    </div>
-  );
-}
-
-// Detachment enhancements, selectable from the roster while editing. Each is
-// carried by one leader/character (the existing per-unit enhancement model),
-// and its points are added to the army total via unitPoints(). Selecting one
-// routes it to that character; picking a different character moves it there.
-function EnhancementsSection({ army, detachment, accent, onSetEnhancement }) {
-  const [expanded, setExpanded] = useState(true);
-  if (!detachment || !detachment.enhancements.length) return null;
-
-  // Which (if any) character currently carries each enhancement.
-  const carrierOf = (id) => army.units.find((u) => u.enhancementId === id) || null;
-  const characters = army.units.filter((u) => u.role === "Characters");
-  const totalEnhancementPts = detachment.enhancements
-    .filter((e) => carrierOf(e.id))
-    .reduce((s, e) => s + (e.points || 0), 0);
-
-  return (
-    <div className="space-y-px">
-      <button onClick={() => setExpanded((v) => !v)} className="w-full flex items-center justify-between gap-2 px-4 py-2 text-left active:opacity-80" style={{ background: "var(--wh-surface)" }}>
-        <span className="flex items-center gap-1.5 fs10 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>
-          <Sparkles size={13} /> Enhancements · {detachment.enhancements.length}
-        </span>
-        <span className="flex items-center gap-2">
-          {totalEnhancementPts > 0 && (
-            <span className="fs10 uppercase tracking-widest tnum" style={{ color: "var(--wh-accent-gold)" }}>+{totalEnhancementPts} pts</span>
-          )}
-          <span style={{ color: "var(--wh-muted)" }}>{expanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}</span>
-        </span>
-      </button>
-
-      {expanded && (
-        <div className="px-4 pb-3 space-y-2">
-          {characters.length === 0 && (
-            <p className="fs11" style={{ color: "var(--wh-dim)" }}>Add a leader or character to assign an enhancement.</p>
-          )}
-          {detachment.enhancements.map((e) => {
-            const carrier = carrierOf(e.id);
-            return (
-              <div key={e.id} style={{ background: "var(--wh-surface)" }}>
-                <div className="flex items-center justify-between gap-2 px-3 py-2.5">
-                  <div className="min-w-0 flex-1">
-                    <div className="font-display text-sm" style={{ color: "var(--wh-text)" }}>{e.name}</div>
-                    <div className="fs10 uppercase tracking-widest mt-0.5" style={{ color: "var(--wh-muted)" }}>
-                      {e.points} pts{e.source ? ` · ${e.source}` : ""}
-                    </div>
-                  </div>
-                  {carrier && (
-                    <span className="fs10 uppercase tracking-widest shrink-0" style={{ color: "var(--wh-accent-gold)" }}>
-                      → {carrier.name}
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap gap-1.5 px-3 pb-3">
-                  <button onClick={() => onSetEnhancement(null, e.id)}
-                    className="fs10 uppercase tracking-widest px-2.5 py-1.5 active:opacity-70"
-                    style={{ background: !carrier ? "var(--wh-accent)" : "var(--wh-surface-alt)", color: !carrier ? "var(--wh-text)" : "var(--wh-text-body)" }}>
-                    None
-                  </button>
-                  {characters.map((c) => (
-                    <button key={c.instId} onClick={() => onSetEnhancement(c.instId, e.id)}
-                      className="fs10 uppercase tracking-widest px-2.5 py-1.5 active:opacity-70"
-                      style={{ background: carrier?.instId === c.instId ? "var(--wh-accent)" : "var(--wh-surface-alt)", color: carrier?.instId === c.instId ? "var(--wh-text)" : "var(--wh-text-body)" }}>
-                      {c.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
       )}
     </div>
   );
@@ -213,11 +180,11 @@ function ModeToggle({ playing, onChange }) {
 }
 
 export default function Roster({
-  army, detachments, detachment, stratagems, onRename, onSelect, onAdd, onOpenDetachmentPicker, onRemoveDetachment, onSetBattleSize, onSetEnhancement,
+  army, detachments, stratagems, onRename, onSelect, onAdd, onOpenDetachmentPicker, onRemoveDetachment, onSetBattleSize, onToggleEnhancement,
   onResetGame, onSetMode, onOpenIconPicker,
   selectedUnitId, fixedAddButton = true, onDuplicateUnit, onDeleteUnit,
 }) {
-  const total = armyPoints(army);
+  const total = armyPoints(army) + armyEnhancementPoints(army);
   const [renamingArmy, setRenamingArmy] = useState(false);
   const accent = factionAccent(army.faction);
   const groups = groupByRole(army.units);
@@ -256,13 +223,7 @@ export default function Roster({
       <div className="px-4 pt-4">
         {(detachments.length > 0 || !playing) && (
           <DetachmentsSection army={army} detachments={detachments} playing={playing} accent={accent}
-            onOpenDetachmentPicker={onOpenDetachmentPicker} onRemoveDetachment={onRemoveDetachment} onSetBattleSize={onSetBattleSize} />
-        )}
-
-        {!playing && (
-          <div className="mt-2">
-            <EnhancementsSection army={army} detachment={detachment} accent={accent} onSetEnhancement={onSetEnhancement} />
-          </div>
+            onOpenDetachmentPicker={onOpenDetachmentPicker} onRemoveDetachment={onRemoveDetachment} onSetBattleSize={onSetBattleSize} onToggleEnhancement={onToggleEnhancement} />
         )}
 
         <div className="mt-2">
