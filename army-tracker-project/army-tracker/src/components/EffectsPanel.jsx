@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link2, Unlink, X, Plus, AlertTriangle } from "lucide-react";
 import { unitMatchesAbility } from "../lib/detachments.js";
+import { attachmentRole } from "../lib/catalog.js";
 import { SectionLabel, AbilityText } from "./shared.jsx";
 
 function Chip({ active, accent, onClick, children }) {
@@ -53,7 +54,7 @@ export default function EffectsPanel({
         {leader && (
           <div className="px-3 py-2" style={{ background: "var(--wh-surface)" }}>
             <div className="flex items-center justify-between gap-2">
-              <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Led by {leader.name}</span>
+              <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>{attachmentRole(leader) === "support" ? "Supported by" : "Led by"} {leader.name}</span>
               <button onClick={() => onSetLeader(unit.instId, null)} className="p-1 active:opacity-60 shrink-0" style={{ color: "var(--wh-muted)" }}><Unlink size={14} /></button>
             </div>
             {leaderAbilities.length === 0 ? (
@@ -69,13 +70,13 @@ export default function EffectsPanel({
 
         {!editing && currentlyLeading && (
           <div className="px-3 py-2" style={{ background: "var(--wh-surface)" }}>
-            <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Leading {currentlyLeading.name}</span>
+            <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>{attachmentRole(unit) === "support" ? "Supporting" : "Leading"} {currentlyLeading.name}</span>
           </div>
         )}
 
         {editing && isCharacter && followers.length > 0 && (
           <div className="px-3 py-2" style={{ background: "var(--wh-surface)" }}>
-            <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Lead a unit</span>
+            <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>{attachmentRole(unit) === "support" ? "Support a unit" : "Lead a unit"}</span>
             <div className="flex flex-wrap gap-2 mt-2">
               {followers.map((f) => {
                 const active = f.leaderInstId === unit.instId;
@@ -84,7 +85,7 @@ export default function EffectsPanel({
                   <Chip key={f.instId} active={active} accent={accent}
                     onClick={() => onSetLeader(f.instId, active ? null : unit.instId)}>
                     <div className="flex items-center gap-1.5 font-display text-sm"><Link2 size={12} />{f.name}</div>
-                    {otherLeader && <div className="fs9 mt-0.5" style={{ color: "var(--wh-muted)" }}>Led by {otherLeader.name}</div>}
+                    {otherLeader && <div className="fs9 mt-0.5" style={{ color: "var(--wh-muted)" }}>{attachmentRole(otherLeader) === "support" ? "Supported by" : "Led by"} {otherLeader.name}</div>}
                   </Chip>
                 );
               })}
@@ -94,7 +95,7 @@ export default function EffectsPanel({
 
         {editing && !leader && eligibleLeaders.length > 0 && (
           <div className="px-3 py-2" style={{ background: "var(--wh-surface)" }}>
-            <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Attach a leader</span>
+            <span className="fs11 uppercase tracking-widest" style={{ color: "var(--wh-muted)" }}>Attach a leader or support</span>
             <div className="flex flex-wrap gap-2 mt-2">
               {eligibleLeaders.map((l) => (
                 <Chip key={l.instId} accent={accent} onClick={() => onSetLeader(unit.instId, l.instId)}>

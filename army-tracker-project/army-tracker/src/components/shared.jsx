@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
 import { Link2, Copy, Trash2, X } from "lucide-react";
-import { factionAccent, unitPoints, compositionOption, currentWounds, maxWounds, modelWounds } from "../lib/catalog.js";
+import { factionAccent, unitPoints, compositionOption, currentWounds, maxWounds, modelWounds, attachmentRole } from "../lib/catalog.js";
 import { parseWeaponAbilities } from "../lib/weaponAbilities.js";
 import { showRule, onShowRule, lookupRule, tokenizeRulesText, STAT_RULES } from "../lib/rules.js";
 import { useCloseOnBack } from "../lib/useCloseOnBack.js";
@@ -348,7 +348,9 @@ export function UnitTile({ unit, armyUnits = [], selected = false, editing = fal
               {(leader || leading) && (
                 <div className="flex items-center gap-1 fs9 uppercase tracking-widest mt-0.5" style={{ color: "var(--wh-accent-gold)" }}>
                   <Link2 size={10} />
-                  {leader ? `Led by ${leader.name}` : `Leading ${leading.name}`}
+                  {leader
+                    ? `${attachmentRole(leader) === "support" ? "Supported by" : "Led by"} ${leader.name}`
+                    : `${attachmentRole(unit) === "support" ? "Supporting" : "Leading"} ${leading.name}`}
                 </div>
               )}
             </div>

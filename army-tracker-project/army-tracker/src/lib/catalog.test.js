@@ -9,6 +9,8 @@ import {
   modelWounds,
   currentWounds,
   refreshUnits,
+  isSupportUnit,
+  attachmentRole,
 } from "./catalog.js";
 
 // ---------------------------------------------------------------------------
@@ -235,5 +237,29 @@ describe("refreshUnits (re-merging a stored army onto the current catalog)", () 
     const stored = { id: "gone", name: "Deleted Upstream", instId: "i", compositionIndex: 0 };
     const [out] = refreshUnits([stored], [FRESH]);
     expect(out).toBe(stored);
+  });
+});
+
+describe("attachment role (leader vs support)", () => {
+  it("detects a Support unit by its [Core] Support ability", () => {
+    const bladeguard = { abilities: [{ name: "Support", type: "Core" }, { name: "Raise the Banner", type: "Datasheet" }] };
+    expect(isSupportUnit(bladeguard)).toBe(true);
+    expect(attachmentRole(bladeguard)).toBe("support");
+  });
+
+  it("detects a Leader unit by its [Core] Leader ability", () => {
+    const captain = { abilities: [{ name: "Leader", type: "Core" }] };
+    expect(isSupportUnit(captain)).toBe(false);
+    expect(attachmentRole(captain)).toBe("lead");
+  });
+
+  it("ignores non-Core abilities with the same name (e.g. a Support weapon keyword)", () => {
+    const unit = { abilities: [{ name: "Support", type: "Datasheet" }] };
+    expect(isSupportUnit(unit)).toBe(false);
+  });
+
+  it("defaults to lead when there is no Support ability", () => {
+    expect(attachmentRole({ abilities: [] })).toBe("lead");
+    expect(attachmentRole({})).toBe("lead");
   });
 });

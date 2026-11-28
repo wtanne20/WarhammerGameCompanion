@@ -60,6 +60,18 @@ export function armyPoints(army) {
   return army.units.reduce((s, u) => s + unitPoints(u), 0);
 }
 
+// A character's attachment role, from its [Core] ability: "Support" means it
+// supports a squad (Bladeguard Ancient, Apothecary…), "Leader" means it leads
+// one (Captain, Marshal…). The two are mutually exclusive in the data. Used
+// to say "Supported by" vs "Led by" instead of hardcoding "led" everywhere.
+export function isSupportUnit(unit) {
+  return (unit.abilities || []).some((a) => a.type === "Core" && /^support\b/i.test(a.name));
+}
+
+export function attachmentRole(unit) {
+  return isSupportUnit(unit) ? "support" : "lead";
+}
+
 // The models in this unit instance, each with its own Wounds, in datasheet
 // order (sergeant/leader first). Built from compositionText ("1 Intercessor
 // Sergeant model, 4-9 Intercessor models") matched against the model
